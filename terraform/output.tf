@@ -1,4 +1,4 @@
 output "kubeconfig" {
-  value     = infomaniak_kaas.kluster.kubeconfig
+  value     = infomaniak_kaas.cluster.kubeconfig
   sensitive = true
 }

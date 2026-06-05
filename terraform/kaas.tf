@@ -1,5 +1,5 @@
 
-resource "infomaniak_kaas" "kluster" {
+resource "infomaniak_kaas" "cluster" {
   public_cloud_id         = var.public_cloud_id
   public_cloud_project_id = var.public_cloud_project_id
 
@@ -12,9 +12,9 @@ resource "infomaniak_kaas" "kluster" {
 
 
 resource "infomaniak_kaas_instance_pool" "instance_pool" {
-  public_cloud_id         = infomaniak_kaas.kluster.public_cloud_id
-  public_cloud_project_id = infomaniak_kaas.kluster.public_cloud_project_id
-  kaas_id                 = infomaniak_kaas.kluster.id
+  public_cloud_id         = infomaniak_kaas.cluster.public_cloud_id
+  public_cloud_project_id = infomaniak_kaas.cluster.public_cloud_project_id
+  kaas_id                 = infomaniak_kaas.cluster.id
 
   name              = "instance-pool-1"
   flavor_name       = "a1-ram2-disk20-perf1"

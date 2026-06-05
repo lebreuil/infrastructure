@@ -25,6 +25,7 @@ locals {
 
 
 module "flux_operator_bootstrap" {
+  depends_on = [infomaniak_kaas.cluster]
   source  = "controlplaneio-fluxcd/flux-operator-bootstrap/kubernetes"
   version = "0.7.0"
 

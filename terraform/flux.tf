@@ -11,7 +11,7 @@ locals {
     type = "Opaque"
     stringData = merge(
       local.has_git_token ? {
-        username = "git"  
+        username = "git"
         password = var.git_token
       } : {},
       local.has_github_app ? {
@@ -33,7 +33,7 @@ module "flux_operator_bootstrap" {
   gitops_resources = {
     instance_yaml = file("${path.root}/../clusters/${var.cluster_name}/flux-system/flux-instance.yaml")
     operator_chart = {
-      values_yaml = file("${path.root}/clusters/${var.cluster_name}/flux-system/flux-operator-values.yaml")
+      values_yaml = file("${path.root}/../clusters/${var.cluster_name}/flux-system/flux-operator-values.yaml")
     }
   }
 
@@ -44,9 +44,9 @@ module "flux_operator_bootstrap" {
         "reconcile.fluxcd.io/watch" = "Enabled"
       }
       data = {
-        CLUSTER_NAME   = var.cluster_name
-        GIT_URL       = var.git_url
-        GIT_REF       = var.git_ref
+        CLUSTER_NAME = var.cluster_name
+        GIT_URL      = var.git_url
+        GIT_REF      = var.git_ref
       }
     }
   }

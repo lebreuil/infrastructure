@@ -11,7 +11,7 @@ locals {
     type = "Opaque"
     stringData = merge(
       local.has_git_token ? {
-        username = "git"
+        username = "git"  
         password = var.git_token
       } : {},
       local.has_github_app ? {
@@ -44,7 +44,9 @@ module "flux_operator_bootstrap" {
         "reconcile.fluxcd.io/watch" = "Enabled"
       }
       data = {
-        cluster_name   = var.cluster_name
+        CLUSTER_NAME   = var.cluster_name
+        GIT_URL       = var.git_url
+        GIT_REF       = var.git_ref
       }
     }
   }

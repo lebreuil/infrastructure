@@ -1,5 +1,5 @@
 multitenancy:
-  enabled: true
+  enabled: false
   defaultServiceAccount: flux-operator
 reporting:
   interval: 45s

@@ -1,12 +1,13 @@
 # Github related variables
-variable "github_org" {
-  description = "GitHub organization"
+
+variable "git_url" {
+  description = "URL of the Git repository."
   type        = string
   default     = ""
 }
 
-variable "github_repository" {
-  description = "GitHub repository"
+variable "git_ref" {
+  description = "Reference of the Git repository."
   type        = string
   default     = ""
 }

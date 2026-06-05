@@ -16,27 +16,15 @@ spec:
     - notification-controller
   cluster:
     type: kubernetes
-    size: medium
-    multitenant: true
+    size: smal
+    multitenant: false
     tenantDefaultServiceAccount: flux
     networkPolicy: true
     domain: "cluster.local"
   sync:
-    kind: OCIRepository
-    url: "oci://ghcr.io/controlplaneio-fluxcd/d2-fleet"
-    ref: "latest"
-    path: "clusters/staging"
-    pullSecret: "ghcr-auth"
-  kustomize:
-    patches:
-      - target:
-          kind: OCIRepository
-          name: flux-system
-        patch: |
-          - op: add
-            path: /spec/verify
-            value:
-              provider: cosign
-              matchOIDCIdentity:
-              - issuer: ^https://token\.actions\.githubusercontent\.com$
-                subject: ^https://github\.com/controlplaneio-fluxcd/d2-fleet/\.github/workflows/push-artifact\.yaml@refs/heads/main$
+    kind: GitRepository
+    provider: github
+    url: "${GIT_URL}"
+    ref: "${GIT_REF}"
+    path: "clusters/${CLUSTER_NAME}"
+    pullSecret: "flux-system"

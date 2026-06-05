@@ -22,20 +22,6 @@ In the the main.tf file update the openstack provider cloud parameter definition
 Retrieve the [infomaniak token](https://www.infomaniak.com/en/support/faq/2582/add-and-manage-infomaniak-api-tokens)
 
 
-## Setup the terraform backend
-
-Create the s3 credentials
-´´´
-openstack --os-cloud <cloud> ec2 credentials create
-´´´
-
-install the aws cli
-
-´´´
-aws configure
-aws --endpoint-url=https://s3.pub1.infomaniak.cloud s3api create-bucket --bucket tfstate
-´´´
-
 ## get kubeconfig
 
 ´´´

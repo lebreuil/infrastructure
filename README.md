@@ -62,10 +62,7 @@ flux create secret githubapp flux-system \
 
   ## netbox installation
 
-flux create source oci netbox \
+flux create source helm netbox \
     --url=oci://ghcr.io/netbox-community/netbox-chart/netbox \
-    --tag=8.3.13 \
-    --interval=10m
+    --interval=10m \
     --export > netbox-source.yaml
-
-     oci://ghcr.io/netbox-community/netbox-chart/netbox

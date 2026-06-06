@@ -16,7 +16,7 @@ spec:
     - notification-controller
   cluster:
     type: kubernetes
-    size: smal
+    size: small
     multitenant: false
     tenantDefaultServiceAccount: flux
     networkPolicy: true
@@ -24,7 +24,7 @@ spec:
   sync:
     kind: GitRepository
     provider: github
-    url: "${GIT_URL}"
-    ref: "${GIT_REF}"
-    path: "clusters/${CLUSTER_NAME}"
+    url: "https://github.com/lebreuil/infrastructure.git"
+    ref: "refs/heads/main"
+    path: "clusters/staging"
     pullSecret: "flux-system"

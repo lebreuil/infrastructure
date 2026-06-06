@@ -33,3 +33,29 @@ terraform output -raw kubeconfig > kubeconfig
 [flux operator](https://github.com/controlplaneio-fluxcd/terraform-kubernetes-flux-operator-bootstrap)
 
 [Terraform module](https://registry.terraform.io/modules/controlplaneio-fluxcd/flux-operator-bootstrap/kubernetes/latest)
+
+```bash
+export GITHUB_APP_PEM=`cat path/to/app.private-key.pem`
+```
+
+exemple:
+https://github.com/yyewolf/infra/blob/main/terraform/modules/flux-bootstrap/providers.tf
+https://yewolf.fr/blog/building-my-infra-on-infomaniak-kubernetes-managed/#openstack-proxy
+
+## get the github app installation id
+
+Go to the Organization settings
+Click on 'GitHub Apps' under 'Third-party Access'
+If there are multiple GitHub apps, choose your App and click on 'Configure'
+Once your GitHub App is selected check the URL for obtaining 'GitHub App Installation ID'
+The URL looks like this:
+
+https://github.com/organizations/<Organization-name>/settings/installations/<ID>
+Pick the <ID> part and that's your GitHub App Installation ID.
+
+https://github.com/organizations/lebreuil/settings/installations/138501007
+
+flux create secret githubapp flux-system \
+  --app-id=3927717 \
+  --app-installation-id=138501007 \
+  --app-private-key=lebreuil-fluxcd.2026-05-31.private-key.pem

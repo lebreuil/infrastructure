@@ -24,31 +24,31 @@ locals {
 }
 
 
-module "flux_operator_bootstrap" {
-  depends_on = [infomaniak_kaas.cluster]
-  source  = "controlplaneio-fluxcd/flux-operator-bootstrap/kubernetes"
-  version = "0.7.0"
+# module "flux_operator_bootstrap" {
+#   depends_on = [infomaniak_kaas.cluster]
+#   source  = "controlplaneio-fluxcd/flux-operator-bootstrap/kubernetes"
+#   version = "0.7.0"
 
-  revision = var.bootstrap_revision
+#   revision = var.bootstrap_revision
 
-  gitops_resources = {
-    instance_yaml = file("${path.root}/../clusters/${var.cluster_name}/flux-system/flux-instance.yaml")
-    operator_chart = {
-      values_yaml = file("${path.root}/../clusters/${var.cluster_name}/flux-system/flux-operator-values.yaml")
-    }
-  }
+#   gitops_resources = {
+#     instance_yaml = file("${path.root}/../clusters/${var.cluster_name}/flux-system/flux-instance.yaml")
+#     operator_chart = {
+#       values_yaml = file("${path.root}/../clusters/${var.cluster_name}/flux-system/flux-operator-values.yaml")
+#     }
+#   }
 
-  managed_resources = {
-    secrets_yaml = local.git_auth_secret
-    runtime_info = {
-      labels = {
-        "reconcile.fluxcd.io/watch" = "Enabled"
-      }
-      data = {
-        CLUSTER_NAME = var.cluster_name
-        GIT_URL      = var.git_url
-        GIT_REF      = var.git_ref
-      }
-    }
-  }
-}
+#   managed_resources = {
+#     secrets_yaml = local.git_auth_secret
+#     runtime_info = {
+#       labels = {
+#         "reconcile.fluxcd.io/watch" = "Enabled"
+#       }
+#       data = {
+#         CLUSTER_NAME = var.cluster_name
+#         GIT_URL      = var.git_url
+#         GIT_REF      = var.git_ref
+#       }
+#     }
+#   }
+# }

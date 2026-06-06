@@ -59,3 +59,13 @@ flux create secret githubapp flux-system \
   --app-id=3927717 \
   --app-installation-id=138501007 \
   --app-private-key=lebreuil-fluxcd.2026-05-31.private-key.pem
+
+  ## netbox installation
+
+flux create source oci netbox \
+    --url=oci://ghcr.io/netbox-community/netbox-chart/netbox \
+    --tag=8.3.13 \
+    --interval=10m
+    --export > netbox-source.yaml
+
+     oci://ghcr.io/netbox-community/netbox-chart/netbox

@@ -66,3 +66,14 @@ flux create source helm netbox \
     --url=oci://ghcr.io/netbox-community/netbox-chart/netbox \
     --interval=10m \
     --export > netbox-source.yaml
+
+flux create kustomization netbox \
+  --target-namespace=default \
+  --source=netbox \
+  --path="./kustomize" \
+  --prune=true \
+  --wait=true \
+  --interval=30m \
+  --retry-interval=2m \
+  --health-check-timeout=3m \
+  --export > netbox-kustomization.yaml

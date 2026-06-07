@@ -1,14 +1,14 @@
----
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: HelmChart
-metadata:
-  name: netbox
-  namespace: flux-system
-spec:
-  interval: 5m0s
-  chart: netbox
-  reconcileStrategy: ChartVersion
-  sourceRef:
-    kind: HelmRepository
-    name: netbox
-  version: '8.3.*'
+# ---
+# apiVersion: source.toolkit.fluxcd.io/v1
+# kind: HelmChart
+# metadata:
+#   name: netbox
+#   namespace: flux-system
+# spec:
+#   interval: 5m0s
+#   chart: netbox
+#   reconcileStrategy: ChartVersion
+#   sourceRef:
+#     kind: HelmRepository
+#     name: netbox
+#   version: '8.3.*'

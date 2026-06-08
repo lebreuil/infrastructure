@@ -1,15 +1,15 @@
-# ---
-# apiVersion: helm.toolkit.fluxcd.io/v2
-# kind: HelmRelease
-# metadata:
-#   name: netbox
-#   namespace: default
-# spec:
-#   interval: 15m
-#   timeout: 5m
-#   chartRef:
-#     kind: HelmChart
-#     name: netbox
-#     namespace: default
-#   releaseName: netbox
-#   targetNamespace: netbox
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: netbox
+  namespace: default
+spec:
+  interval: 15m
+  timeout: 5m
+  chartRef:
+    kind: HelmChart
+    name: netbox
+    namespace: default
+  releaseName: netbox
+  targetNamespace: netbox

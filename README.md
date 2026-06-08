@@ -63,18 +63,29 @@ https://github.com/organizations/lebreuil/settings/installations/138501007
 
 #### create the gihub App secret
 
+```bash
 flux create secret githubapp flux-system \
   --app-id=3927717 \
   --app-installation-id=138501007 \
   --app-private-key=<path/to/app.private-key.pem>
+```
 
-  ## netbox installation
+### create the FluxInstance
 
+```bash
+kubectl apply -f <path/to/flux-instance.yaml>
+```
+
+## netbox installation
+
+```bash
 flux create source helm netbox \
     --url=oci://ghcr.io/netbox-community/netbox-chart/netbox \
     --interval=10m \
     --export > netbox-source.yaml
+```
 
+```bash
 flux create kustomization netbox \
   --target-namespace=default \
   --source=netbox \
@@ -85,3 +96,4 @@ flux create kustomization netbox \
   --retry-interval=2m \
   --health-check-timeout=3m \
   --export > netbox-kustomization.yaml
+```

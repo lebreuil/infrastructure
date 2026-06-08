@@ -32,17 +32,22 @@ terraform output -raw kubeconfig > kubeconfig
 
 [flux operator](https://github.com/controlplaneio-fluxcd/terraform-kubernetes-flux-operator-bootstrap)
 
-[Terraform module](https://registry.terraform.io/modules/controlplaneio-fluxcd/flux-operator-bootstrap/kubernetes/latest)
+
+### install the flux operator
+
+```bash
+helm install flux-operator oci://ghcr.io/controlplaneio-fluxcd/charts/flux-operator \
+  --namespace flux-system \
+  --create-namespace
+```
+
+### Create the github app secret
 
 ```bash
 export GITHUB_APP_PEM=`cat path/to/app.private-key.pem`
 ```
 
-exemple:
-https://github.com/yyewolf/infra/blob/main/terraform/modules/flux-bootstrap/providers.tf
-https://yewolf.fr/blog/building-my-infra-on-infomaniak-kubernetes-managed/#openstack-proxy
-
-## get the github app installation id
+#### get the github app installation id
 
 Go to the Organization settings
 Click on 'GitHub Apps' under 'Third-party Access'
@@ -56,14 +61,12 @@ Pick the <ID> part and that's your GitHub App Installation ID.
 https://github.com/organizations/lebreuil/settings/installations/138501007
 
 
-## Manual setup
+#### create the gihub App secret
 
 flux create secret githubapp flux-system \
   --app-id=3927717 \
   --app-installation-id=138501007 \
-  --app-private-key=lebreuil-fluxcd.2026-05-31.private-key.pem
-
-
+  --app-private-key=<path/to/app.private-key.pem>
 
   ## netbox installation
 

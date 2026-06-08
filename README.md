@@ -55,10 +55,15 @@ Pick the <ID> part and that's your GitHub App Installation ID.
 
 https://github.com/organizations/lebreuil/settings/installations/138501007
 
+
+## Manual setup
+
 flux create secret githubapp flux-system \
   --app-id=3927717 \
   --app-installation-id=138501007 \
   --app-private-key=lebreuil-fluxcd.2026-05-31.private-key.pem
+
+
 
   ## netbox installation
 

@@ -85,18 +85,10 @@ flux create source helm netbox \
     --export > netbox-source.yaml
 ```
 
-```bash
-flux create kustomization netbox \
-  --target-namespace=default \
-  --source=netbox \
-  --path="./kustomize" \
-  --prune=true \
-  --wait=true \
-  --interval=30m \
-  --retry-interval=2m \
-  --health-check-timeout=3m \
-  --export > netbox-kustomization.yaml
-```
+
+export POD_NAME=$(kubectl get pods --namespace "default" -l "app.kubernetes.io/name=netbox,app.kubernetes.io/instance=netbox" -o jsonpath="{.items[0].metadata.name}")
+echo "Visit http://127.0.0.1:8080 to use your application"
+kubectl port-forward $POD_NAME 8080:8080
 
 ### monitor deployment
 

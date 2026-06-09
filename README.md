@@ -97,3 +97,8 @@ flux create kustomization netbox \
   --health-check-timeout=3m \
   --export > netbox-kustomization.yaml
 ```
+
+### monitor deployment
+
+https://fluxcd.io/flux/cheatsheets/troubleshooting/
+

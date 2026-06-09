@@ -1,1 +1,4 @@
-resourcesPreset: "micro"
+replicaCount: 1
+resourcesPreset: "nano"
+autoscaling:
+  enabled: false

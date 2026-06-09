@@ -11,6 +11,4 @@ spec:
   sourceRef:
     kind: HelmRepository
     name: netbox
-  valuesFiles:
-        - netbox-values.yaml
   version: '8.3.*'

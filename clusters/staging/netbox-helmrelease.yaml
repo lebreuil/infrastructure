@@ -13,3 +13,8 @@ spec:
     namespace: flux-system
   releaseName: netbox
   targetNamespace: default
+  values:
+    replicaCount: 1
+    resourcesPreset: "nano"
+    autoscaling:
+      enabled: false

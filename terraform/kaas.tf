@@ -18,8 +18,8 @@ resource "infomaniak_kaas_instance_pool" "instance_pool" {
 
   name              = "instance-pool-1"
   flavor_name       = "a1-ram2-disk20-perf1"
-  min_instances     = 1
-  max_instances     = 1
+  min_instances     = 2
+  max_instances     = 2
   availability_zone = "dc3-a-10"
 
 }

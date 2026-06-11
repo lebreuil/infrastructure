@@ -1,14 +1,14 @@
 
-# resource "infomaniak_kaas" "cluster" {
-#   public_cloud_id         = var.public_cloud_id
-#   public_cloud_project_id = var.public_cloud_project_id
+resource "infomaniak_kaas" "cluster" {
+  public_cloud_id         = var.public_cloud_id
+  public_cloud_project_id = var.public_cloud_project_id
 
-#   name               = "default"
-#   pack_name          = "shared"
-#   kubernetes_version = "1.35"
-#   region             = "dc3-a"
+  name               = "default"
+  pack_name          = "shared"
+  kubernetes_version = "1.35"
+  region             = "dc3-a"
 
-# }
+}
 
 
 # resource "infomaniak_kaas_instance_pool" "instance_pool" {

@@ -67,7 +67,8 @@ https://github.com/organizations/lebreuil/settings/installations/138501007
 flux create secret githubapp flux-system \
   --app-id=3927717 \
   --app-installation-id=138501007 \
-  --app-private-key=<path/to/app.private-key.pem>
+  --app-private-key=<path/to/app.private-key.pem> \
+  --export > githubapp-auth.yaml
 ```
 
 ### create the FluxInstance
@@ -85,10 +86,6 @@ flux create source helm netbox \
     --export > netbox-source.yaml
 ```
 
-
-export POD_NAME=$(kubectl get pods --namespace "default" -l "app.kubernetes.io/name=netbox,app.kubernetes.io/instance=netbox" -o jsonpath="{.items[0].metadata.name}")
-echo "Visit http://127.0.0.1:8080 to use your application"
-kubectl port-forward $POD_NAME 8080:8080
 
 ### monitor deployment
 

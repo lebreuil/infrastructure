@@ -56,3 +56,11 @@ variable "github_app_pem" {
   type        = string
   default     = ""
 }
+
+# Domain
+
+variable "domain" {
+  description = "The domain"
+  type        = string
+  default     = ""
+}

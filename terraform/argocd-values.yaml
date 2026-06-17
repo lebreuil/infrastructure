@@ -1,0 +1,25 @@
+# Argo CD Helm values
+#
+# Networking strategy:
+#   Argo CD is exposed via a shared Cilium Gateway rather than a dedicated
+#   one, to avoid provisioning multiple Octavia Load Balancers and Floating
+#   IPs on Infomaniak (one billable resource per LoadBalancer service).
+#
+#   A single shared Gateway in kube-system handles all external traffic,
+#   with per-service HTTPRoutes routing to the correct backend.
+#
+#   Traffic flow:
+#   Internet → Cloud LB → Shared Cilium Gateway (LoadBalancer) → HTTPRoute → ArgoCD (ClusterIP)
+#
+#   The shared Gateway, wildcard Certificate and HTTPRoute Terraform
+#   resources are defined in main.tf.
+#
+# server.extraArgs:
+#   --insecure disables Argo CD's built-in TLS since TLS is terminated
+#   at the shared Cilium Gateway level.
+
+server:
+  extraArgs:
+    - --insecure
+  service:
+    type: ClusterIP

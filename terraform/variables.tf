@@ -57,10 +57,62 @@ variable "github_app_pem" {
   default     = ""
 }
 
-# Domain
+variable "letsencrypt_email" {
+  description = "Email address for Let's Encrypt certificate expiry notifications"
+  type        = string
+}
+
+# Cloudflare related variables
+
+variable "cloudflare_api_token" {
+  description = "Cloudflare API token for DNS-01 ACME challenge"
+  type        = string
+  sensitive   = true
+}
+
+variable "cloudflare_zone_id" {
+  description = "Cloudflare Zone ID for your domain, found in the Cloudflare dashboard"
+  type        = string
+}
 
 variable "domain" {
-  description = "The domain"
+  description = "Base domain for all services (e.g. your-domain.com). A wildcard certificate will be issued for *.your-domain.com"
   type        = string
-  default     = ""
+}
+
+# Netbox related variables
+
+variable "netbox_secret_key" {
+  description = "Django secret key for NetBox (long random string, min 50 chars)"
+  type        = string
+  sensitive   = true
+}
+
+variable "netbox_superuser_password" {
+  description = "Initial NetBox admin password"
+  type        = string
+  sensitive   = true
+}
+
+variable "netbox_superuser_api_token" {
+  description = "Initial NetBox admin API token (40 hex characters)"
+  type        = string
+  sensitive   = true
+}
+
+variable "netbox_postgresql_password" {
+  description = "PostgreSQL password for NetBox"
+  type        = string
+  sensitive   = true
+}
+
+variable "netbox_redis_password" {
+  description = "Redis password for NetBox"
+  type        = string
+  sensitive   = true
+}
+
+variable "netbox_admin_email" {
+  description = "Email address for the NetBox admin superuser"
+  type        = string
 }

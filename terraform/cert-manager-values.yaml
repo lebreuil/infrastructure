@@ -1,0 +1,17 @@
+# cert-manager Helm values
+#
+# Networking strategy:
+#   cert-manager is deployed to automate TLS certificate issuance and renewal
+#   from Let's Encrypt, eliminating manual certificate management.
+#
+# crds.enabled:
+#   Installs cert-manager CRDs as part of the Helm chart rather than
+#   separately, keeping the installation self-contained and upgradeable.
+#
+# DNS-01 challenge:
+#   Certificates are issued via the DNS-01 ACME challenge, which works
+#   even without a publicly accessible HTTP endpoint during provisioning.
+#   Requires DNS provider API credentials (see ClusterIssuer resource).
+
+crds:
+  enabled: true

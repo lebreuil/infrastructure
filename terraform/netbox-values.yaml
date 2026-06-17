@@ -1,0 +1,49 @@
+# NetBox Helm chart values
+#
+# Deployed via Argo CD Application resource (see netbox.tf).
+#
+# Security:
+#   All sensitive values (superuser password, secret key, PostgreSQL and
+#   Redis passwords) are stored in a pre-existing Kubernetes Secret
+#   (netbox-secrets) managed by Terraform, not in this file.
+#   This avoids credentials being stored in the Argo CD Application or
+#   in this repository.
+#
+# Storage:
+#   Persistent storage for media is disabled to avoid pod scheduling
+#   issues with ReadWriteOnce PVCs across multiple replicas.
+#   This is the recommended approach for production per the chart docs.
+#
+# Networking:
+#   Service type is ClusterIP — external access is handled by the shared
+#   Cilium Gateway and HTTPRoute defined in netbox.tf.
+
+allowedHosts:
+  - "netbox.${domain}"  # replaced at apply time via Terraform templatefile()
+
+superuser:
+  name: admin
+  email: "${netbox_admin_email}"
+  existingSecret: "netbox-secrets"
+
+existingSecret: "netbox-secrets"
+
+postgresql:
+  enabled: true
+  auth:
+    existingSecret: "netbox-secrets"
+    secretKeys:
+      adminPasswordKey: "postgresql-password"
+      userPasswordKey: "postgresql-password"
+
+redis:
+  enabled: true
+  auth:
+    existingSecret: "netbox-secrets"
+    existingSecretPasswordKey: "redis-password"
+
+persistence:
+  enabled: false
+
+service:
+  type: ClusterIP

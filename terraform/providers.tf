@@ -45,13 +45,12 @@ provider "kubectl" {
   load_config_file       = false
 }
 
-# port_forward replaces server_addr + password authentication.
-# The provider connects via port-forward to the ArgoCD API server using
-# the current kubeconfig context, avoiding the need to expose ArgoCD
-# externally before Terraform can manage it. This also removes the
-# chicken-and-egg problem where ArgoCD needed to be reachable at
-# argocd.your-domain.com before the DNS record was created.
+# Appliaction has to be deployed after argocd is installed.
+# The password has to be updated at first logon
+
 provider "argocd" {
-  port_forward           = true
-  port_forward_with_namespace = "argocd"
+  server_addr = "argocd.${var.domain}:443"
+  username    = "admin"
+  password    = var.argocd_admin_password
+  insecure    = false
 }

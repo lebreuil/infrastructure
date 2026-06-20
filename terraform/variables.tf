@@ -86,6 +86,14 @@ variable "domain" {
   type        = string
 }
 
+# argoCD related variables
+
+variable "argocd_admin_password" {
+  description = "Argo CD admin password for the Terraform provider authentication. Retrieved via: kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d"
+  type        = string
+  sensitive   = true
+}
+
 # Netbox related variables
 
 variable "netbox_secret_key" {

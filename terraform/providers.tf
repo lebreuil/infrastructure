@@ -6,6 +6,13 @@ provider "infomaniak" {
   token = var.infomaniak_token
 }
 
+# Uses the clouds.yaml configuration file for authentication.
+# The cloud name matches the --os-cloud flag used with the OpenStack CLI.
+# clouds.yaml is typically located at ~/.config/openstack/clouds.yaml
+provider "openstack" {
+  cloud = var.os_cloud
+}
+
 locals {
   kube_config = yamldecode(infomaniak_kaas.cluster.kubeconfig)
 }

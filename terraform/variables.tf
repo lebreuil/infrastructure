@@ -62,6 +62,12 @@ variable "letsencrypt_email" {
   type        = string
 }
 
+# OpenStack related variables
+variable "os_cloud" {
+  description = "OpenStack cloud name from clouds.yaml (matches --os-cloud CLI flag, e.g. PCP-NG8KDXJ-dc3-a)"
+  type        = string
+}
+
 # Cloudflare related variables
 
 variable "cloudflare_api_token" {

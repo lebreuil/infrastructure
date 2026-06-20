@@ -1,38 +1,18 @@
 # F5 NGINX Ingress Controller Helm values
 #
-# Replaces the community ingress-nginx controller which reached EOL
-# in March 2026. The F5 NGINX Ingress Controller is the actively
-# maintained successor, backed by F5/NGINX Inc.
-#
-# Key differences from ingress-nginx:
-#   - Helm chart served from OCI registry (ghcr.io/nginx/charts/nginx-ingress)
-#   - Annotation prefix is nginx.org/ instead of nginx.ingress.kubernetes.io/
-#   - IngressClass name is "nginx" (same, but registered under nginx.org controller)
-#
-# Custom resources (VirtualServer, TransportServer etc.) are disabled
-# since we only use the standard Ingress API. This avoids installing
-# unnecessary CRDs on the shared cluster.
-#
-# Networking:
-#   A single LoadBalancer service is created for the ingress controller,
-#   resulting in a single Octavia Load Balancer and Floating IP on
-#   Infomaniak. All services are exposed through this single entry point.
-#
-# Traffic flow:
-#   Internet → Cloudflare → Floating IP → Octavia LB
-#       → F5 NGINX Ingress Controller
-#           → Ingress → ArgoCD  (argocd-server:80)
-#           → Ingress → NetBox  (netbox:80)
+# nodeSelector:
+#   Uses the custom label infomaniak.com/node-role=worker applied
+#   to the worker node pool via infomaniak_kaas_instance_pool.workers.
+#   This is stable and predictable regardless of the Infomaniak-generated
+#   pool name (e.g. pck-w6rxgvy-ph9).
 
 controller:
   service:
     type: LoadBalancer
+    annotations:
+      loadbalancer.openstack.org/subnet-id: "${subnet_id}"
 
-  # Disable custom resources — we only use the standard Ingress API.
-  # This avoids installing VirtualServer, TransportServer CRDs on the
-  # shared cluster.
   enableCustomResources: false
 
-  # Ensures NGINX runs on our dedicated worker nodes only
   nodeSelector:
-    node-role.kubernetes.io/worker: "true"
+    custom.kaas.infomaniak.cloud/node-role: "worker"

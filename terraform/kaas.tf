@@ -22,4 +22,9 @@ resource "infomaniak_kaas_instance_pool" "workers" {
   max_instances     = 2
   availability_zone = "dc3-a-10"
 
+  labels = {
+    "custom.kaas.infomaniak.cloud/node-role" = "worker"
+  }
+
 }
+

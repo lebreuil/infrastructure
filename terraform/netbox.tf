@@ -63,7 +63,7 @@ resource "argocd_application" "netbox" {
     source {
       repo_url        = "ghcr.io/netbox-community/netbox-chart"
       chart           = "netbox"
-      target_revision = "5.0.0"
+      target_revision = "8.3.18"
 
       helm {
         # values_object replaces values (raw YAML string)

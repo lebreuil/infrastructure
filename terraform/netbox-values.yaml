@@ -19,28 +19,19 @@
 #   Cilium Gateway and HTTPRoute defined in netbox.tf.
 
 allowedHosts:
-  - "netbox.${domain}"  # replaced at apply time via Terraform templatefile()
+  - "*"
 
 superuser:
-  name: admin
-  email: "${netbox_admin_email}"
   existingSecret: "netbox-secrets"
 
 existingSecret: "netbox-secrets"
 
 postgresql:
   enabled: true
-  auth:
-    existingSecret: "netbox-secrets"
-    secretKeys:
-      adminPasswordKey: "postgresql-password"
-      userPasswordKey: "postgresql-password"
 
-redis:
-  enabled: true
-  auth:
-    existingSecret: "netbox-secrets"
-    existingSecretPasswordKey: "redis-password"
+email:
+  existingSecretName: "netbox-secrets"
+  existingSecretKey: "email-password"
 
 persistence:
   enabled: false

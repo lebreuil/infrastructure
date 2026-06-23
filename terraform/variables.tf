@@ -114,19 +114,16 @@ variable "netbox_superuser_api_token" {
   sensitive   = true
 }
 
-variable "netbox_postgresql_password" {
-  description = "PostgreSQL password for NetBox"
-  type        = string
-  sensitive   = true
-}
-
-variable "netbox_redis_password" {
-  description = "Redis password for NetBox"
-  type        = string
-  sensitive   = true
-}
-
 variable "netbox_admin_email" {
   description = "Email address for the NetBox admin superuser"
   type        = string
+
+
+}
+
+variable "netbox_email_password" {
+  description = "Password for the NetBox email account (if using email features)"
+  type        = string
+  sensitive   = true
+  default     = ""
 }

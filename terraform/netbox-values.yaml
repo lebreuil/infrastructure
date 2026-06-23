@@ -38,3 +38,14 @@ persistence:
 
 service:
   type: ClusterIP
+
+nodeSelector:
+  custom.kaas.infomaniak.cloud/node-role: "worker"
+
+worker:
+  nodeSelector:
+    custom.kaas.infomaniak.cloud/node-role: "worker"
+
+housekeeping:
+  nodeSelector:
+    custom.kaas.infomaniak.cloud/node-role: "worker"

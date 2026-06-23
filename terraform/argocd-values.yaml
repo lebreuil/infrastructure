@@ -23,3 +23,6 @@ server:
     - --insecure
   service:
     type: ClusterIP
+
+nodeSelector:
+  custom.kaas.infomaniak.cloud/node-role: "management"

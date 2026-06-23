@@ -15,4 +15,4 @@ controller:
   enableCustomResources: false
 
   nodeSelector:
-    custom.kaas.infomaniak.cloud/node-role: "worker"
+    custom.kaas.infomaniak.cloud/node-role: "management"

@@ -15,3 +15,6 @@
 
 crds:
   enabled: true
+
+nodeSelector:
+  custom.kaas.infomaniak.cloud/node-role: "management"

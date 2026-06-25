@@ -52,3 +52,13 @@ output "subnet_id" {
   description = "OpenStack subnet ID used by the KaaS cluster"
   value       = local.subnet_id
 }
+
+
+# Fetches Cloudflare IPv4 ranges from the official Cloudflare API.
+# These are the IPs from which Cloudflare proxies traffic to your origin.
+# Restricting the security group to these IPs ensures only Cloudflare
+# can reach the NGINX ingress, preventing direct access bypassing
+# Cloudflare's DDoS protection and WAF.
+
+data "cloudflare_ip_ranges" "cloudflare" {
+}

@@ -17,7 +17,8 @@ resource "helm_release" "nginx_ingress" {
   values = [templatefile("${path.module}/nginx-values.yaml", {
     domain    = var.domain,
     subnet_id = local.subnet_id
+    cloudflare_ipv4_cidrs = data.cloudflare_ip_ranges.cloudflare.ipv4_cidrs
   })]
 
-  depends_on = [infomaniak_kaas_instance_pool.workers]
+  depends_on = [data.cloudflare_ip_ranges.cloudflare, infomaniak_kaas_instance_pool.workers]
 }

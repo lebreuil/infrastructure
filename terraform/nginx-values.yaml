@@ -1,16 +1,22 @@
 # F5 NGINX Ingress Controller Helm values
-#
+# Uses : openstack-cloud-controller-manager
+#  https://github.com/kubernetes/cloud-provider-openstack/blob/master/docs/openstack-cloud-controller-manager/using-openstack-cloud-controller-manager.md#config-openstack-cloud-controller-manager
 # nodeSelector:
-#   Uses the custom label infomaniak.com/node-role=worker applied
-#   to the worker node pool via infomaniak_kaas_instance_pool.workers.
+#   Uses the custom label infomaniak.com/node-role=management applied
+#   to the worker node pool via infomaniak_kaas_instance_pool.management.
 #   This is stable and predictable regardless of the Infomaniak-generated
 #   pool name (e.g. pck-w6rxgvy-ph9).
+#   filter incoming trafic using service.loadBalancerSourceRanges
 
 controller:
   service:
     type: LoadBalancer
     annotations:
       loadbalancer.openstack.org/subnet-id: "${subnet_id}"
+    loadBalancerSourceRanges:
+%{ for cidr in cloudflare_ipv4_cidrs ~}
+      - "${cidr}"
+%{ endfor ~}
 
   enableCustomResources: false
 

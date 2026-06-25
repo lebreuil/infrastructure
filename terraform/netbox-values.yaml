@@ -13,11 +13,7 @@
 #   Persistent storage for media is disabled to avoid pod scheduling
 #   issues with ReadWriteOnce PVCs across multiple replicas.
 #   This is the recommended approach for production per the chart docs.
-#
-# Networking:
-#   Service type is ClusterIP — external access is handled by the shared
-#   Cilium Gateway and HTTPRoute defined in netbox.tf.
-
+# require a wildcard to make heathchecks work
 allowedHosts:
   - "*"
 
@@ -28,6 +24,12 @@ existingSecret: "netbox-secrets"
 
 postgresql:
   enabled: true
+
+valkey:
+  # Use standalone architecture instead of replication to avoid
+  # deploying 3 replica pods. Sufficient for NetBox caching and
+  # task queuing in a non-high-availability setup.
+  architecture: standalone
 
 email:
   existingSecretName: "netbox-secrets"

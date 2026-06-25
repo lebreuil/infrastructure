@@ -80,11 +80,12 @@ resource "kubernetes_ingress_v1" "argocd" {
   ]
 }
 
-resource "cloudflare_record" "argocd" {
+resource "cloudflare_dns_record" "argocd" {
   zone_id = var.cloudflare_zone_id
   name    = "argocd"
   # IP read directly from the Ingress status — no temp file needed
-  value   = kubernetes_ingress_v1.argocd.status.0.load_balancer.0.ingress.0.ip
+  content = kubernetes_ingress_v1.argocd.status.0.load_balancer.0.ingress.0.ip
   type    = "A"
+  ttl = 1
   proxied = true
 }

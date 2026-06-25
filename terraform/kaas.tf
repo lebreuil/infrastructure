@@ -34,7 +34,7 @@ resource "infomaniak_kaas_instance_pool" "workers" {
   kaas_id                 = infomaniak_kaas.cluster.id
 
   name              = "instance-pool-1"
-  flavor_name       = "a1-ram2-disk20-perf1"
+  flavor_name       = "a4-ram8-disk80-perf1"
   min_instances     = 2
   max_instances     = 2
   availability_zone = "dc3-a-10"

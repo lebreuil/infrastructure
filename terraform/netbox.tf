@@ -3,12 +3,6 @@
 # Referenced by the NetBox Helm chart via existingSecret to avoid
 # storing credentials in the Argo CD Application or values file.
 #
-# Keys required by the chart:
-#   secret_key          - Django secret key (long random string)
-#   superuser_password  - Initial admin password
-#   superuser_api_token - Initial admin API token
-#   postgresql-password - PostgreSQL password
-#   redis-password      - Redis password
 resource "kubernetes_secret_v1" "netbox_secrets" {
   metadata {
     name      = "netbox-secrets"
@@ -56,9 +50,8 @@ resource "argocd_application" "netbox" {
     namespace = "argocd"
   }
 
-  # wait = true replaces the previous depends_on workaround,
-  # ensuring Terraform waits for NetBox to be fully synced and healthy
-  # before considering the resource created.
+  # wait = true caused the resource to be tainted.
+  # remove taint with: terraform state untaint argocd_application.netbox
   wait = false
 
   spec {
@@ -142,10 +135,11 @@ resource "kubernetes_ingress_v1" "netbox" {
   ]
 }
 
-resource "cloudflare_record" "netbox" {
+resource "cloudflare_dns_record" "netbox" {
   zone_id = var.cloudflare_zone_id
   name    = "netbox"
-  value   = kubernetes_ingress_v1.netbox.status.0.load_balancer.0.ingress.0.ip
+  content = kubernetes_ingress_v1.netbox.status.0.load_balancer.0.ingress.0.ip
   type    = "A"
+  ttl     = 1
   proxied = true
 }

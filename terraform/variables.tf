@@ -117,8 +117,16 @@ variable "netbox_superuser_api_token" {
 variable "netbox_admin_email" {
   description = "Email address for the NetBox admin superuser"
   type        = string
+}
 
+variable "netbox_redis_password" {
+  description = "Email address for the NetBox admin superuser"
+  type        = string
+}
 
+variable "netbox_postgresql_password" {
+  description = "Email address for the NetBox admin superuser"
+  type        = string
 }
 
 variable "netbox_email_password" {

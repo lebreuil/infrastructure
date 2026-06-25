@@ -24,12 +24,31 @@ existingSecret: "netbox-secrets"
 
 postgresql:
   enabled: true
+  auth:
+    existingSecret: "netbox-secrets"
+    secretKeys:
+      adminPasswordKey: "postgresql-password"
+
 
 valkey:
   # Use standalone architecture instead of replication to avoid
   # deploying 3 replica pods. Sufficient for NetBox caching and
   # task queuing in a non-high-availability setup.
   architecture: standalone
+  auth:
+    # Use the password from netbox-secrets instead of letting Valkey
+    # generate its own secret. This keeps all NetBox credentials in
+    # a single Terraform-managed secret.
+    existingSecret: "netbox-secrets"
+    existingSecretPasswordKey: "valkey-password"
+
+taskQueuing:
+  existingSecretName: "netbox-valkey"
+  existingSecretKey: "valkey-password"
+
+cachingDatabase:
+  existingSecretName: "netbox-valkey"
+  existingSecretKey: "valkey-password"
 
 email:
   existingSecretName: "netbox-secrets"

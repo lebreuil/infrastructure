@@ -18,6 +18,8 @@ resource "kubernetes_secret_v1" "netbox_secrets" {
     username  = "admin"
     email     = var.netbox_admin_email
     api_token = var.netbox_superuser_api_token
+    valkey-password = var.netbox_redis_password
+    postgresql-password = var.netbox_postgresql_password
 
     # Email password
     # Referenced by email.existingSecretKey: email-password

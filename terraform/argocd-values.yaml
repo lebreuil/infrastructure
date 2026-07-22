@@ -15,8 +15,7 @@
 #   resources are defined in main.tf.
 #
 # server.extraArgs:
-#   --insecure disables Argo CD's built-in TLS since TLS is terminated
-#   at the shared Cilium Gateway level.
+#   --insecure disables Argo CD's built-in TLS since TLS is terminated at the ingress level
 
 server:
   extraArgs:

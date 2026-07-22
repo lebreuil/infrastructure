@@ -14,7 +14,7 @@ resource "helm_release" "argocd" {
   repository       = "https://argoproj.github.io/argo-helm"
   chart            = "argo-cd"
   namespace        = "argocd"
-  version          = "7.8.26" # check https://artifacthub.io/packages/helm/argo/argo-cd for latest
+  version          = "10.1.4" # check https://artifacthub.io/packages/helm/argo/argo-cd for latest
   create_namespace = true
 
   values = [file("${path.module}/argocd-values.yaml")]
@@ -78,14 +78,4 @@ resource "kubernetes_ingress_v1" "argocd" {
     helm_release.argocd,
     helm_release.nginx_ingress
   ]
-}
-
-resource "cloudflare_dns_record" "argocd" {
-  zone_id = var.cloudflare_zone_id
-  name    = "argocd"
-  # IP read directly from the Ingress status — no temp file needed
-  content = kubernetes_ingress_v1.argocd.status.0.load_balancer.0.ingress.0.ip
-  type    = "A"
-  ttl = 1
-  proxied = true
 }

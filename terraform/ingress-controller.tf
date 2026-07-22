@@ -15,8 +15,8 @@ resource "helm_release" "nginx_ingress" {
   timeout                    = 600
 
   values = [templatefile("${path.module}/nginx-values.yaml", {
-    domain    = var.domain,
-    subnet_id = local.subnet_id
+    domain                = var.domain
+    subnet_id             = local.subnet_id
     cloudflare_ipv4_cidrs = data.cloudflare_ip_ranges.cloudflare.ipv4_cidrs
   })]
 

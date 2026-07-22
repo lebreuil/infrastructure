@@ -89,7 +89,6 @@ of how many services are exposed.
 |---|---|---|
 | `argocd` | `helm_release` | Deploys Argo CD in the `argocd` namespace |
 | `argocd_ingress` | `kubectl_manifest` | Ingress rule routing traffic to Argo CD |
-| `argocd` (DNS) | `cloudflare_record` | DNS A record pointing to the Floating IP |
 
 
 ## Usage

@@ -1,0 +1,95 @@
+# OpenBao Helm chart values
+#
+# OpenBao is an open source secret manager (fork of HashiCorp Vault)
+# deployed as cluster infrastructure to provide secret management for
+# all applications deployed via Argo CD.
+#
+# Storage:
+#   File storage is used for simplicity. For production, consider
+#   migrating to a more robust backend (e.g. PostgreSQL, Consul).
+#   Data is persisted on a PVC on the management node.
+#
+# TLS:
+#   TLS is disabled on the listener since NGINX Ingress handles
+#   TLS termination externally. Internal cluster communication
+#   uses plain HTTP.
+#
+# Seal:
+#   OpenBao requires manual initialization and unsealing after
+#   first deployment. See post-deployment steps in openbao.tf.
+#
+# UI:
+#   The web UI is enabled and exposed via NGINX Ingress at
+#   openbao.your-domain.com. Access is protected by OpenBao's
+#   own authentication mechanisms.
+#
+# nodeSelector:
+#   OpenBao runs on management nodes alongside other infrastructure
+#   components to keep worker nodes dedicated to application workloads.
+
+global:
+  enabled: true
+
+server:
+  dev:
+    enabled: false
+
+  ha:
+    enabled: false
+
+  standalone:
+    enabled: true
+    config: |
+      ui = true
+
+      listener "tcp" {
+        tls_disable = 1
+        address     = "[::]:8200"
+        cluster_address = "[::]:8201"
+      }
+
+      storage "file" {
+        path = "/openbao/data"
+      }
+
+  dataStorage:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+    accessMode: ReadWriteOnce
+
+  nodeSelector:
+    custom.kaas.infomaniak.cloud/node-role: "management"
+
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+      nginx.org/ssl-redirect: "true"
+    hosts:
+      - host: "openbao.${domain}"
+        paths:
+          - /
+    tls:
+      - secretName: openbao-tls
+        hosts:
+          - "openbao.${domain}"
+
+ui:
+  enabled: true
+  serviceType: ClusterIP
+
+# injector enabled to mount secrets directly into pods
+# as files without creating Kubernetes Secrets.
+# The injector runs as a mutating webhook on management nodes and
+# automatically injects an OpenBao agent sidecar into annotated pods.
+injector:
+  enabled: true
+
+  nodeSelector:
+    custom.kaas.infomaniak.cloud/node-role: "management"
+
+# CSI provider disabled — injector is used instead
+csi:
+  enabled: false

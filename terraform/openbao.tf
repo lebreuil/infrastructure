@@ -50,3 +50,16 @@ resource "helm_release" "openbao" {
     kubectl_manifest.letsencrypt_issuer
   ]
 }
+
+# OpenBao DNS record — platform-owned service, managed here
+# alongside the OpenBao deployment rather than in openbao-config.tf
+# since it is not an application onboarding concern.
+resource "cloudflare_record" "openbao" {
+  zone_id = var.cloudflare_zone_id
+  name    = "openbao"
+  value   = data.kubernetes_service_v1.nginx_ingress.status.0.load_balancer.0.ingress.0.ip
+  type    = "A"
+  proxied = true
+
+  depends_on = [helm_release.nginx_ingress]
+}

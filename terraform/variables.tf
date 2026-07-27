@@ -1,17 +1,3 @@
-# Github related variables
-
-variable "git_url" {
-  description = "URL of the Git repository."
-  type        = string
-  default     = ""
-}
-
-variable "git_ref" {
-  description = "Reference of the Git repository."
-  type        = string
-  default     = ""
-}
-
 # Infomaniak related variables
 
 variable "infomaniak_token" {
@@ -31,34 +17,8 @@ variable "public_cloud_project_id" {
   type        = number
 }
 
-variable "bootstrap_revision" {
-  description = "Bump to trigger a new bootstrap run."
-  type        = number
-  default     = 1
-  nullable    = false
-}
-
-variable "github_app_id" {
-  description = "GitHub App ID."
-  type        = string
-  default     = ""
-}
-
-variable "github_app_installation_id" {
-  description = "GitHub App Installation ID."
-  type        = string
-  default     = ""
-}
-
-variable "github_app_pem" {
-  description = "The contents of the GitHub App private key PEM file."
-  sensitive   = true
-  type        = string
-  default     = ""
-}
-
-variable "letsencrypt_email" {
-  description = "Email address for Let's Encrypt certificate expiry notifications"
+variable "domain" {
+  description = "Base domain for all services (e.g. your-domain.com). A wildcard certificate will be issued for *.your-domain.com"
   type        = string
 }
 
@@ -81,7 +41,18 @@ variable "cloudflare_zone_id" {
   type        = string
 }
 
-variable "domain" {
-  description = "Base domain for all services (e.g. your-domain.com). A wildcard certificate will be issued for *.your-domain.com"
+## cert-manager related variables
+
+variable "letsencrypt_email" {
+  description = "Email address for Let's Encrypt certificate expiry notifications"
   type        = string
 }
+
+## openbao related variables
+
+variable "openbao_root_token" {
+  description = "Root token for the OpenBao instance"
+  type        = string
+  sensitive   = true
+}
+

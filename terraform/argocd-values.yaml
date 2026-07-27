@@ -1,27 +1,118 @@
 # Argo CD Helm values
 #
 # Networking strategy:
-#   Argo CD is exposed via a shared Cilium Gateway rather than a dedicated
-#   one, to avoid provisioning multiple Octavia Load Balancers and Floating
-#   IPs on Infomaniak (one billable resource per LoadBalancer service).
+#   Argo CD is exposed via the shared NGINX Ingress Controller.
+#   TLS is terminated at the NGINX level using a certificate provisioned
+#   by cert-manager. The --insecure flag disables Argo CD's built-in TLS.
 #
-#   A single shared Gateway in kube-system handles all external traffic,
-#   with per-service HTTPRoutes routing to the correct backend.
+# GitHub App authentication:
+#   Argo CD connects to all GitHub repositories in the organisation using
+#   a single GitHub App credential template. The GitHub App credentials
+#   are stored in OpenBao and injected into the repo server pod via the
+#   OpenBao Agent Injector — no Kubernetes Secret is created.
 #
-#   Traffic flow:
-#   Internet → Cloud LB → Shared Cilium Gateway (LoadBalancer) → HTTPRoute → ArgoCD (ClusterIP)
+#   The repo server init container reads the injected credentials and
+#   creates a single Argo CD credential template covering the entire
+#   GitHub organisation (argocd.argoproj.io/secret-type: repo-creds).
+#   All repositories under the organisation are automatically accessible
+#   without any per-repository configuration.
 #
-#   The shared Gateway, wildcard Certificate and HTTPRoute Terraform
-#   resources are defined in main.tf.
+# Secret management:
+#   GitHub App credentials are fetched from OpenBao at pod startup via
+#   the Agent Injector — no Kubernetes Secret is created for credentials.
 #
-# server.extraArgs:
-#   --insecure disables Argo CD's built-in TLS since TLS is terminated at the ingress level
+# Node scheduling:
+#   All Argo CD components run on management nodes to keep worker nodes
+#   dedicated to application workloads.
 
 server:
   extraArgs:
     - --insecure
   service:
     type: ClusterIP
+  nodeSelector:
+    custom.kaas.infomaniak.cloud/node-role: "management"
 
-nodeSelector:
-  custom.kaas.infomaniak.cloud/node-role: "management"
+repoServer:
+  nodeSelector:
+    custom.kaas.infomaniak.cloud/node-role: "management"
+
+  # OpenBao Agent Injector annotations — fetches GitHub App credentials
+  # from OpenBao and writes them as files into the repo server pod.
+  podAnnotations:
+    bao.openbao.org/agent-inject: "true"
+    bao.openbao.org/role: "argocd"
+    # Inject GitHub App private key
+    bao.openbao.org/agent-inject-secret-github-app-key: "secret/data/platform/argocd-github-app"
+    bao.openbao.org/agent-inject-template-github-app-key: |
+      {{- with secret "secret/data/platform/argocd-github-app" -}}
+      {{ .Data.data.private-key }}
+      {{- end }}
+    # Inject GitHub App metadata (app-id and installation-id)
+    bao.openbao.org/agent-inject-secret-github-app-meta: "secret/data/platform/argocd-github-app"
+    bao.openbao.org/agent-inject-template-github-app-meta: |
+      {{- with secret "secret/data/platform/argocd-github-app" -}}
+      app-id={{ .Data.data.app-id }}
+      installation-id={{ .Data.data.installation-id }}
+      {{- end }}
+
+  # Init container — creates the Argo CD organisation-level credential
+  # template using the GitHub App credentials fetched from OpenBao.
+  # Uses repo-creds (not repository) so all repos under the organisation
+  # are automatically accessible without per-repository configuration.
+  initContainers:
+    - name: argocd-github-app-init
+      image: bitnami/kubectl:latest
+      command:
+        - sh
+        - -c
+        - |
+          # Read GitHub App metadata from OpenBao injected file
+          APP_ID=$(grep app-id /bao/secrets/github-app-meta | cut -d= -f2)
+          INSTALL_ID=$(grep installation-id /bao/secrets/github-app-meta | cut -d= -f2)
+
+          echo "Configuring Argo CD GitHub App credential template..."
+          echo "App ID: ${APP_ID}"
+          echo "Installation ID: ${INSTALL_ID}"
+
+          # Create organisation-level credential template
+          # argocd.argoproj.io/secret-type: repo-creds means this covers
+          # ALL repositories under https://github.com/your-org automatically
+          kubectl apply -f - <<MANIFEST
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: github-org-creds
+            namespace: argocd
+            labels:
+              argocd.argoproj.io/secret-type: repo-creds
+          stringData:
+            type: git
+            url: https://github.com/your-org
+            githubAppID: "${APP_ID}"
+            githubAppInstallationID: "${INSTALL_ID}"
+            githubAppPrivateKey: |
+          $(sed 's/^/      /' /bao/secrets/github-app-key)
+          MANIFEST
+
+          echo "GitHub App credential template configured successfully"
+
+applicationSet:
+  nodeSelector:
+    custom.kaas.infomaniak.cloud/node-role: "management"
+
+controller:
+  nodeSelector:
+    custom.kaas.infomaniak.cloud/node-role: "management"
+
+dex:
+  nodeSelector:
+    custom.kaas.infomaniak.cloud/node-role: "management"
+
+notifications:
+  nodeSelector:
+    custom.kaas.infomaniak.cloud/node-role: "management"
+
+redis:
+  nodeSelector:
+    custom.kaas.infomaniak.cloud/node-role: "management"

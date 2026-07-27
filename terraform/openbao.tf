@@ -37,12 +37,10 @@ resource "helm_release" "openbao" {
   repository       = "https://openbao.github.io/openbao-helm"
   chart            = "openbao"
   namespace        = "openbao"
-  version          = "0.28.6"
+  version          = "0.28.4"
   create_namespace = true
 
-  values = [templatefile("${path.module}/openbao-values.yaml", {
-    domain = var.domain
-  })]
+  values = [file("${path.module}/openbao-values.yaml")]
 
   depends_on = [
     infomaniak_kaas_instance_pool.management,
@@ -51,14 +49,66 @@ resource "helm_release" "openbao" {
   ]
 }
 
+# OpenBao Ingress — defined separately from the Helm chart to follow
+# the same pattern as all other platform and application services.
+# TLS certificate is provisioned automatically by cert-manager.
+resource "kubernetes_ingress_v1" "openbao" {
+  wait_for_load_balancer = true
+
+  metadata {
+    name      = "openbao-ingress"
+    namespace = "openbao"
+    annotations = {
+      "cert-manager.io/cluster-issuer" = "letsencrypt-prod"
+      "nginx.org/ssl-redirect"         = "true"
+    }
+  }
+
+  spec {
+    ingress_class_name = "nginx"
+
+    tls {
+      hosts       = ["openbao.${var.domain}"]
+      secret_name = "openbao-tls"
+    }
+
+    rule {
+      host = "openbao.${var.domain}"
+      http {
+        path {
+          path      = "/"
+          path_type = "Prefix"
+          backend {
+            service {
+              name = "openbao-ui"
+              port {
+                number = 80
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  depends_on = [
+    helm_release.openbao,
+    kubectl_manifest.letsencrypt_issuer
+  ]
+}
+
+
 # OpenBao DNS record — platform-owned service, managed here
 # alongside the OpenBao deployment rather than in openbao-config.tf
 # since it is not an application onboarding concern.
-resource "cloudflare_record" "openbao" {
+
+resource "cloudflare_dns_record" "openbao" {
   zone_id = var.cloudflare_zone_id
   name    = "openbao"
-  value   = data.kubernetes_service_v1.nginx_ingress.status.0.load_balancer.0.ingress.0.ip
-  type    = "A"
+  ttl = 1
+  type = "A"
+  comment = "OpenBao DNS record managed by Terraform"
+  content = kubernetes_ingress_v1.openbao.status.0.load_balancer.0.ingress.0.ip
   proxied = true
 
   depends_on = [helm_release.nginx_ingress]

@@ -83,11 +83,14 @@ resource "kubernetes_ingress_v1" "argocd" {
 # Argo CD DNS record — platform-owned service, managed here
 # alongside the Argo CD deployment rather than in openbao-config.tf
 # since it is not an application onboarding concern.
-resource "cloudflare_record" "argocd" {
+
+resource "cloudflare_dns_record" "argocd" {
   zone_id = var.cloudflare_zone_id
   name    = "argocd"
-  value   = data.kubernetes_service_v1.nginx_ingress.status.0.load_balancer.0.ingress.0.ip
-  type    = "A"
+  ttl = 1
+  type = "A"
+  comment = "Argo CD DNS record managed by Terraform"
+  content = kubernetes_ingress_v1.argocd.status.0.load_balancer.0.ingress.0.ip
   proxied = true
 
   depends_on = [helm_release.nginx_ingress]

@@ -295,9 +295,10 @@ Everything depends on the cluster existing first.
 
 ### Phase 2 — Node pools
 
+Only the management nodes are required at this stage.
+
 ```bash
 terraform apply -target=infomaniak_kaas_instance_pool.management
-terraform apply -target=infomaniak_kaas_instance_pool.workers
 ```
 
 Both pools depend on the cluster. `network.tf` depends on worker nodes
@@ -309,7 +310,7 @@ Phase 3.
 ### Phase 3 — Network + shared infrastructure
 
 ```bash
-# Subnet lookup (depends on worker nodes)
+# Subnet lookup (depends on management nodes)
 terraform apply -target=data.openstack_networking_port_v2.worker
 terraform apply -target=data.openstack_networking_subnet_v2.kaas
 
@@ -319,23 +320,21 @@ terraform apply -target=helm_release.cert_manager
 ```
 
 NGINX needs the subnet ID from `network.tf` to configure the Octavia
-Load Balancer annotation. cert-manager is independent of the subnet.
+Load Balancer annotation.  
+cert-manager is independent of the subnet.
 
 ---
 
-### Phase 4 — DNS + issuers + Argo CD
+### Phase 4 —  issuers + Argo CD
 
 ```bash
-# Requires NGINX to have an external IP
-terraform apply -target=cloudflare_record.wildcard
-terraform apply -target=cloudflare_record.apex
-terraform apply -target=cloudflare_zone_settings_override.ssl_strict
-
 # Requires cert-manager
 terraform apply -target=kubectl_manifest.letsencrypt_issuer
 
 # Requires management nodes
 terraform apply -target=helm_release.argocd
+terraform apply -target=kubernetes_ingress_v1.argocd
+terraform apply -target=cloudflare_dns_record.argocd
 ```
 
 ---
@@ -345,6 +344,9 @@ terraform apply -target=helm_release.argocd
 ```bash
 # Requires NGINX (ingress) and cert-manager (TLS)
 terraform apply -target=helm_release.openbao
+terraform apply -target=kubernetes_ingress_v1.openbao
+terraform apply -target=cloudflare_dns_record.openbao
+
 ```
 
 ---
@@ -396,6 +398,12 @@ kubectl rollout restart deployment/argocd-repo-server -n argocd
 
 # Step 4 — Argo CD automatically syncs all registered applications
 # No further action needed
+```
+
+Next steps will require the worker nodes to be deployed.
+
+```bash
+terraform apply -target=infomaniak_kaas_instance_pool.workers
 ```
 
 ---

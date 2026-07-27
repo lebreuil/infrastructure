@@ -50,9 +50,9 @@ variable "letsencrypt_email" {
 
 ## openbao related variables
 
-variable "openbao_root_token" {
-  description = "Root token for the OpenBao instance"
-  type        = string
-  sensitive   = true
-}
+# variable "openbao_root_token" {
+#   description = "Root token for the OpenBao instance"
+#   type        = string
+#   sensitive   = true
+# }
 

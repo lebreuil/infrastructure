@@ -4,24 +4,17 @@
 # deployed as cluster infrastructure to provide secret management for
 # all applications deployed via Argo CD.
 #
+# Ingress:
+#   Not managed here — defined as a separate kubernetes_ingress_v1
+#   resource in openbao.tf so it follows the same pattern as all
+#   other platform services.
+#
 # Storage:
-#   File storage is used for simplicity. For production, consider
-#   migrating to a more robust backend (e.g. PostgreSQL, Consul).
-#   Data is persisted on a PVC on the management node.
+#   File storage persisted on a PVC backed by OpenStack Cinder.
 #
 # TLS:
 #   TLS is disabled on the listener since NGINX Ingress handles
-#   TLS termination externally. Internal cluster communication
-#   uses plain HTTP.
-#
-# Seal:
-#   OpenBao requires manual initialization and unsealing after
-#   first deployment. See post-deployment steps in openbao.tf.
-#
-# UI:
-#   The web UI is enabled and exposed via NGINX Ingress at
-#   openbao.your-domain.com. Access is protected by OpenBao's
-#   own authentication mechanisms.
+#   TLS termination externally.
 #
 # nodeSelector:
 #   OpenBao runs on management nodes alongside other infrastructure
@@ -61,35 +54,14 @@ server:
   nodeSelector:
     custom.kaas.infomaniak.cloud/node-role: "management"
 
-  ingress:
-    enabled: true
-    ingressClassName: nginx
-    annotations:
-      cert-manager.io/cluster-issuer: "letsencrypt-prod"
-      nginx.org/ssl-redirect: "true"
-    hosts:
-      - host: "openbao.${domain}"
-        paths:
-          - /
-    tls:
-      - secretName: openbao-tls
-        hosts:
-          - "openbao.${domain}"
-
 ui:
   enabled: true
   serviceType: ClusterIP
 
-# injector enabled to mount secrets directly into pods
-# as files without creating Kubernetes Secrets.
-# The injector runs as a mutating webhook on management nodes and
-# automatically injects an OpenBao agent sidecar into annotated pods.
 injector:
   enabled: true
-
   nodeSelector:
     custom.kaas.infomaniak.cloud/node-role: "management"
 
-# CSI provider disabled — injector is used instead
 csi:
   enabled: false

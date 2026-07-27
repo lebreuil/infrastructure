@@ -1,12 +1,12 @@
-# Reads worker nodes using the stable custom label applied at
+# Reads management nodes using the stable custom label applied at
 # instance pool creation time.
-data "kubernetes_nodes" "workers" {
+data "kubernetes_nodes" "management" {
   metadata {
     labels = {
-      "custom.kaas.infomaniak.cloud/node-role" = "worker"
+      "custom.kaas.infomaniak.cloud/node-role" = "management"
     }
   }
-  depends_on = [infomaniak_kaas_instance_pool.workers]
+  depends_on = [infomaniak_kaas_instance_pool.management]
 }
 
 locals {
@@ -14,16 +14,16 @@ locals {
   # Format: openstack://<region>/<instance-uuid>
   instance_id = regex(
     "openstack://[^/]*/([a-f0-9-]+)",
-    data.kubernetes_nodes.workers.nodes[0].spec[0].provider_id
+    data.kubernetes_nodes.management.nodes[0].spec[0].provider_id
   )[0]
 }
 
-# Looks up the OpenStack port attached to the first worker node
+# Looks up the OpenStack port attached to the first management node
 # to retrieve its network_id.
-data "openstack_networking_port_v2" "worker" {
+data "openstack_networking_port_v2" "management" {
   device_id  = local.instance_id
   status     = "ACTIVE"
-  depends_on = [data.kubernetes_nodes.workers]
+  depends_on = [data.kubernetes_nodes.management]
 }
 
 # Retrieves the current OpenStack authentication scope to get the
@@ -39,9 +39,9 @@ data "openstack_identity_auth_scope_v3" "current" {
 # tenant_id alone returns too many subnets across all networks.
 # Together they uniquely identify the single subnet used by the cluster.
 data "openstack_networking_subnet_v2" "kaas" {
-  network_id = data.openstack_networking_port_v2.worker.network_id
+  network_id = data.openstack_networking_port_v2.management.network_id
   tenant_id  = data.openstack_identity_auth_scope_v3.current.project_id
-  depends_on = [data.openstack_networking_port_v2.worker]
+  depends_on = [data.openstack_networking_port_v2.management]
 }
 
 locals {

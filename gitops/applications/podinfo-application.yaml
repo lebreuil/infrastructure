@@ -8,10 +8,19 @@ metadata:
 spec:
   project: default
 
-  source:
-    repoURL: https://github.com/lebreuil/podinfo-test-repo
-    targetRevision: HEAD
-    path: deploy
+  sources:
+    # Helm chart from the official podinfo repository
+    - repoURL: https://stefanprodan.github.io/podinfo
+      chart: podinfo
+      targetRevision: "6.7.0"
+      helm:
+        valueFiles:
+          - $values/deploy/values.yaml  # values from your GitHub repo
+
+    # Values and additional manifests from your GitHub repo
+    - repoURL: https://github.com/your-org/podinfo-test-repo
+      targetRevision: HEAD
+      ref: values                       # referenced as $values above
 
   destination:
     server: https://kubernetes.default.svc

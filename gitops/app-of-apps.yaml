@@ -9,17 +9,19 @@ spec:
   project: default
 
   source:
-    repoURL: https://github.com/lebreuil/infrastructure
+    # CHANGED — now watches the dedicated applications repository
+    # instead of the platform repository
+    repoURL: https://github.com/lebreuil/applications-repo
     targetRevision: HEAD
-    path: gitops/applications  # watches this directory
+    path: applications
 
   destination:
     server: https://kubernetes.default.svc
-    namespace: argocd          # creates Applications in argocd namespace
+    namespace: argocd
 
   syncPolicy:
     automated:
-      prune: true              # removes Applications deleted from Git
-      selfHeal: true           # reverts manual changes
+      prune: true
+      selfHeal: true
     syncOptions:
       - CreateNamespace=false

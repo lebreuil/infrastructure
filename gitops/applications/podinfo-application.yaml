@@ -18,7 +18,7 @@ spec:
           - $values/deploy/values.yaml  # values from your GitHub repo
 
     # Values and additional manifests from your GitHub repo
-    - repoURL: https://github.com/your-org/podinfo-test-repo
+    - repoURL: https://github.com/lebreuil/podinfo-test-repo
       targetRevision: HEAD
       ref: values                       # referenced as $values above
 

@@ -11,7 +11,7 @@ spec:
   source:
     # CHANGED — now watches the dedicated applications repository
     # instead of the platform repository
-    repoURL: https://github.com/lebreuil/applications-repo
+    repoURL: https://github.com/lebreuil/applications
     targetRevision: HEAD
     path: applications
 

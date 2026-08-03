@@ -1,3 +1,4 @@
+# gitops/applications/podinfo-application.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -9,7 +10,7 @@ spec:
   project: default
 
   sources:
-    # Source 1 — Helm chart pulled directly from the official podinfo repo
+    # Source 1 — Helm chart from official podinfo repo
     - repoURL: https://stefanprodan.github.io/podinfo
       chart: podinfo
       targetRevision: "6.7.0"
@@ -17,11 +18,18 @@ spec:
         valueFiles:
           - $values/deploy/values.yaml
 
-    # Source 2 — values and additional manifests from your GitHub repo
-    # Referenced as $values in the helm.valueFiles above
-    - repoURL: https://github.com/lebreuil/podinfo-test-repo
+    # Source 2 — values and additional manifests from GitHub repo
+    # ref: values means this source is used for file references only
+    # Additional manifests (ingress.yaml) must be in a separate directory
+    - repoURL: https://github.com/your-org/podinfo-test-repo
       targetRevision: HEAD
       ref: values
+
+    # Source 3 — additional manifests from GitHub repo
+    # This source deploys ingress.yaml and any other manifests
+    - repoURL: https://github.com/your-org/podinfo-test-repo
+      targetRevision: HEAD
+      path: deploy/manifests  # separate directory for manifests
 
   destination:
     server: https://kubernetes.default.svc

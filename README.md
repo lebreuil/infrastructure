@@ -335,6 +335,7 @@ terraform apply -target=kubectl_manifest.letsencrypt_issuer
 terraform apply -target=helm_release.argocd
 terraform apply -target=kubernetes_ingress_v1.argocd
 terraform apply -target=cloudflare_dns_record.argocd
+terraform apply -target=kubectl_manifest.app_of_apps
 ```
 
 ---
@@ -571,7 +572,7 @@ Phase 7    → recreate secrets in OpenBao UI (manual)
 
 ### Onboarding a new application
 
-1. Add three resources to `openbao-config.tf` for the new application:
+1. Add three resources to `applications.tf` for the new application:
    - `vault_policy.<app>` — read-only access to `secret/data/<app>/*`
    - `vault_kubernetes_auth_backend_role.<app>` — binds service account to policy
    - `cloudflare_record.<app>` — DNS A record for `<app>.your-domain.com`

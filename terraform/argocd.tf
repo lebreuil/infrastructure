@@ -95,3 +95,13 @@ resource "cloudflare_dns_record" "argocd" {
 
   depends_on = [helm_release.nginx_ingress]
 }
+
+# App of Apps — bootstraps the Argo CD application registry.
+# Watches the applications-repo/applications/ directory and
+# automatically registers any Application manifest added there.
+# Applied once after Argo CD is deployed — self-managing thereafter.
+resource "kubectl_manifest" "app_of_apps" {
+  yaml_body = file("${path.module}/../gitops/app-of-apps.yaml")
+
+  depends_on = [helm_release.argocd]
+}

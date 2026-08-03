@@ -339,7 +339,7 @@ terraform apply -target=cloudflare_dns_record.argocd
 
 ---
 
-### Phase 5 — OpenBao
+### Phase 5 — OpenBao installation
 
 ```bash
 # Requires NGINX (ingress) and cert-manager (TLS)
@@ -356,6 +356,8 @@ terraform apply -target=cloudflare_dns_record.openbao
 OpenBao must be initialized and unsealed before the Vault Terraform
 provider can connect to configure it.
 
+#### Initialize openbao
+
 ```bash
 # Step 1 — Initialize OpenBao (one-time only)
 kubectl exec -n openbao openbao-0 -- bao operator init
@@ -371,10 +373,126 @@ kubectl exec -n openbao openbao-0 -- bao operator unseal <key-3>
 # Step 4 — Verify OpenBao is unsealed
 kubectl exec -n openbao openbao-0 -- bao status
 
-# Step 5 — Add root token to terraform.tfvars
-echo 'openbao_root_token = "<root-token>"' >> terraform.tfvars
+```
 
-# Step 6 — Apply OpenBao configuration
+#### Create the Terraform policy
+
+```bash
+kubectl exec -n openbao openbao-0 -- \
+  env BAO_TOKEN=<root-token> \
+  bao policy write terraform - << 'EOF'
+
+# KV secrets engine management
+path "secret/*" {
+  capabilities = ["create", "read", "update", "delete", "list"]
+}
+
+# Auth backend management
+path "sys/auth/*" {
+  capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+
+path "auth/*" {
+  capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+
+# Policy management
+path "sys/policies/*" {
+  capabilities = ["create", "read", "update", "delete", "list"]
+}
+
+path "sys/policy/*" {
+  capabilities = ["create", "read", "update", "delete", "list"]
+}
+
+# Secrets engine mount management
+path "sys/mounts/*" {
+  capabilities = ["create", "read", "update", "delete", "list"]
+}
+
+path "sys/mounts" {
+  capabilities = ["read", "list"]
+}
+
+# Auth mount listing — needed by Vault provider initialization
+path "sys/auth" {
+  capabilities = ["read", "list"]
+}
+
+# Token self-management
+path "auth/token/renew-self" {
+  capabilities = ["update"]
+}
+
+path "auth/token/lookup-self" {
+  capabilities = ["read"]
+}
+EOF
+```
+
+#### verify that the policy eas created
+
+```bash
+kubectl exec -n openbao openbao-0 -- \
+  env BAO_TOKEN=<root-token> \
+  bao policy read terraform
+```
+
+#### Create the dedicated Terraform token
+
+```bash
+TOKEN=$(kubectl exec -n openbao openbao-0 -- \
+  env BAO_TOKEN=<root-token> \
+  bao token create \
+    -policy=terraform \
+    -display-name=terraform \
+    -no-default-policy \
+    -orphan \
+    -ttl=0 \
+    -field=token)
+
+echo "Token: $TOKEN"
+```
+
+#### Add the token to terraform.tfvars
+
+```bash
+echo "openbao_terraform_token = \"$TOKEN\"" >> terraform.tfvars
+```
+
+#### Verify the token has the correct permissions
+
+```bash
+kubectl exec -n openbao openbao-0 -- \
+  env BAO_TOKEN=$TOKEN \
+  bao token lookup -self
+```
+
+#### Revoke the root token
+
+Only after verifying the Terraform token works correctly:
+
+```bash
+# Run terraform plan to confirm the token works
+terraform plan
+
+# If plan succeeds, revoke the root token
+kubectl exec -n openbao openbao-0 -- \
+  env BAO_TOKEN=<root-token> \
+  bao token revoke -self
+
+# Verify root token is revoked
+kubectl exec -n openbao openbao-0 -- \
+  env BAO_TOKEN=<root-token> \
+  bao token lookup -self
+# Should return: Code: 403. Errors: permission denied
+```
+
+---
+
+### Phase 7 — Apply OpenBao configuration
+
+```bash
 terraform apply -target=vault_mount.kv
 terraform apply -target=vault_auth_backend.kubernetes
 terraform apply -target=vault_kubernetes_auth_backend_config.kubernetes
@@ -383,7 +501,10 @@ terraform apply  # applies remaining policies and roles
 
 ---
 
-### Phase 7 — Secrets + applications
+### Phase 8 — Secrets + applications
+
+Create teh github App.  
+
 
 ```bash
 # Step 1 — Store GitHub App credentials in OpenBao UI

@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: app-of-apps
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/lebreuil/infrastructure
+    targetRevision: HEAD
+    path: gitops/applications  # watches this directory
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd          # creates Applications in argocd namespace
+
+  syncPolicy:
+    automated:
+      prune: true              # removes Applications deleted from Git
+      selfHeal: true           # reverts manual changes
+    syncOptions:
+      - CreateNamespace=false

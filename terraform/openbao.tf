@@ -80,9 +80,9 @@ resource "kubernetes_ingress_v1" "openbao" {
           path_type = "Prefix"
           backend {
             service {
-              name = "openbao-ui"
+              name = "openbao-ui"  # UI service
               port {
-                number = 80
+                number = 8200       # CHANGED from 80 to 8200
               }
             }
           }

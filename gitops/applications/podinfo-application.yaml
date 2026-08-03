@@ -9,18 +9,19 @@ spec:
   project: default
 
   sources:
-    # Helm chart from the official podinfo repository
+    # Source 1 — Helm chart pulled directly from the official podinfo repo
     - repoURL: https://stefanprodan.github.io/podinfo
       chart: podinfo
       targetRevision: "6.7.0"
       helm:
         valueFiles:
-          - $values/deploy/values.yaml  # values from your GitHub repo
+          - $values/deploy/values.yaml
 
-    # Values and additional manifests from your GitHub repo
+    # Source 2 — values and additional manifests from your GitHub repo
+    # Referenced as $values in the helm.valueFiles above
     - repoURL: https://github.com/lebreuil/podinfo-test-repo
       targetRevision: HEAD
-      ref: values                       # referenced as $values above
+      ref: values
 
   destination:
     server: https://kubernetes.default.svc

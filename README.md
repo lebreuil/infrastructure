@@ -240,6 +240,23 @@ dependencies. Terraform resolves dependencies automatically on subsequent
 runs — the phased approach is only required on the very first deployment
 or after a full cluster recreation.
 
+The deploy.sh script allows to get all of these action done in one go:  
+
+```bash
+# Full deployment from scratch
+./deploy.sh
+
+# Resume from phase 3 after a failure
+./deploy.sh --from 3
+
+# Re-run a single phase
+./deploy.sh --only 6
+
+# Dry run — see what terraform plan shows for a phase
+# (edit script temporarily to use 'terraform plan' instead of 'apply')
+```
+
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  Phase 1 — Cluster                                              │
@@ -253,30 +270,34 @@ or after a full cluster recreation.
                │                            │
 ┌──────────────▼────────────────────────────▼─────────────────────┐
 │  Phase 3 — Network + shared infrastructure (parallel)           │
-│  network.tf          helm_release.nginx     helm_release.        │
-│  (subnet lookup)     (NGINX Ingress)        cert_manager         │
-└──────────────┬────────────────┬────────────────────┬────────────┘
-               │                │                    │
-┌──────────────▼────────────────▼────────────────────▼────────────┐
-│  Phase 4 — DNS + issuers + Argo CD (parallel)                   │
-│  cloudflare_record.*    kubectl_manifest.    helm_release.       │
-│  (wildcard DNS)         letsencrypt_issuer   argocd              │
-└─────────────────────────────────┬───────────────────────────────┘
-                                  │
-┌─────────────────────────────────▼───────────────────────────────┐
-│  Phase 5 — OpenBao                                              │
+│  network.tf          helm_release.nginx     helm_release.       │
+│  (subnet lookup)     (NGINX Ingress)        cert_manager        │
+└──────────────────────────────-┬────────────────────────────────┘
+                                │                    
+┌───────────────────────────────▼─────────────────────────────────┐
+│  Phase 4 — OpenBao  + Manual steps                              │
 │  helm_release.openbao                                           │
+│  bao operator init     bao operator unseal                      │
+└────────────────────────────────┬─-──────────────────────────────┘
+                                 │
+┌────────────────────────────────▼-───────────────────────────────┐
+│  Phase 5 —  OpenBao config                                      │
+│  openbao-config.tf                                              │
+└────────────────────────────────┬─────────────────────────────-──┘
+                                 │
+┌──────────────────────────────--▼────────────────────────────────┐
+│  Phase 6 — Argo CD.                                             │
+│  kubectl_manifest.argocd                                        │
 └─────────────────────────────────┬───────────────────────────────┘
+┌─────────────────────────────────▼───────────────────────────────┐
+│  Phase 7 — Secrets                                              │
+│  OpenBao UI (manual secrets)                                    │
+└─────────────────────────────────────────────────────────────────┘
+
                                   │
 ┌─────────────────────────────────▼───────────────────────────────┐
-│  Phase 6 — Manual steps + OpenBao config                        │
-│  bao operator init     bao operator unseal    openbao-config.tf │
-│  (save keys + token)   (3 of 5 keys)          (terraform apply) │
-└─────────────────────────────────┬───────────────────────────────┘
-                                  │
-┌─────────────────────────────────▼───────────────────────────────┐
-│  Phase 7 — Secrets + applications                               │
-│  OpenBao UI (manual secrets)   Argo CD syncs apps automatically │
+│  Phase 8 — Argo CD app-of-apps bootstrap                        │
+│                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -317,6 +338,9 @@ terraform apply -target=data.openstack_networking_subnet_v2.kaas
 # NGINX and cert-manager can run in parallel
 terraform apply -target=helm_release.nginx_ingress
 terraform apply -target=helm_release.cert_manager
+
+# Requires cert-manager
+terraform apply -target=kubectl_manifest.letsencrypt_issuer
 ```
 
 NGINX needs the subnet ID from `network.tf` to configure the Octavia
@@ -325,35 +349,16 @@ cert-manager is independent of the subnet.
 
 ---
 
-### Phase 4 —  issuers + Argo CD
-
-```bash
-# Requires cert-manager
-terraform apply -target=kubectl_manifest.letsencrypt_issuer
-
-# Requires management nodes
-terraform apply -target=helm_release.argocd
-terraform apply -target=kubernetes_ingress_v1.argocd
-terraform apply -target=cloudflare_dns_record.argocd
-terraform apply -target=kubectl_manifest.app_of_apps
-```
-
----
-
-### Phase 5 — OpenBao installation
+### Phase 4 — OpenBao installation
 
 ```bash
 # Requires NGINX (ingress) and cert-manager (TLS)
 terraform apply -target=helm_release.openbao
 terraform apply -target=kubernetes_ingress_v1.openbao
 terraform apply -target=cloudflare_dns_record.openbao
-
 ```
 
----
-
-### Phase 6 — Manual steps + OpenBao configuration
-
+Maual steps required:  
 OpenBao must be initialized and unsealed before the Vault Terraform
 provider can connect to configure it.
 
@@ -469,29 +474,9 @@ kubectl exec -n openbao openbao-0 -- \
   bao token lookup -self
 ```
 
-#### Revoke the root token
-
-Only after verifying the Terraform token works correctly:
-
-```bash
-# Run terraform plan to confirm the token works
-terraform plan
-
-# If plan succeeds, revoke the root token
-kubectl exec -n openbao openbao-0 -- \
-  env BAO_TOKEN=<root-token> \
-  bao token revoke -self
-
-# Verify root token is revoked
-kubectl exec -n openbao openbao-0 -- \
-  env BAO_TOKEN=<root-token> \
-  bao token lookup -self
-# Should return: Code: 403. Errors: permission denied
-```
-
 ---
 
-### Phase 7 — Apply OpenBao configuration
+### Phase 5 — Apply OpenBao configuration
 
 ```bash
 terraform apply -target=vault_mount.kv
@@ -502,10 +487,22 @@ terraform apply  # applies remaining policies and roles
 
 ---
 
-### Phase 8 — Secrets + applications
+### Phase 6 —  Argo CD
 
-Create teh github App.  
+```bash
+# Requires management nodes
+terraform apply -target=helm_release.argocd
+terraform apply -target=kubernetes_ingress_v1.argocd
+terraform apply -target=cloudflare_dns_record.argocd
 
+terraform apply -target=cloudflare_zero_trust_access_application.argocd
+```
+
+---
+
+### Phase 7 — Argo CD app-of-apps bootstrap
+
+Create the github App.  
 
 ```bash
 # Step 1 — Store GitHub App credentials in OpenBao UI
@@ -528,6 +525,12 @@ Next steps will require the worker nodes to be deployed.
 terraform apply -target=infomaniak_kaas_instance_pool.workers
 ```
 
+Argo CD app-of-apps.  
+
+```bash
+terraform apply -target=kubectl_manifest.app_of_apps
+```
+
 ---
 
 ### Subsequent applies
@@ -544,38 +547,13 @@ Terraform resolves all dependencies automatically via `depends_on`.
 
 ---
 
-### Cluster recreation
-
-On full cluster recreation the phased approach must be repeated.
-The only irreplaceable step is recovering the OpenBao unseal keys
-from secure storage:
-
-```
-Phase 1-5  → terraform apply (fully automatic)
-Phase 6    → unseal OpenBao with saved keys (manual)
-           → terraform apply openbao-config.tf (automatic)
-Phase 7    → recreate secrets in OpenBao UI (manual)
-           → Argo CD syncs all applications (automatic)
-```
-
-| Step | Automated | Manual |
-|---|---|---|
-| Cluster + nodes + infra | ✅ | |
-| NGINX, cert-manager, Argo CD, OpenBao | ✅ | |
-| OpenBao unseal | | ✅ Requires saved unseal keys |
-| OpenBao auth + policies | ✅ | |
-| GitHub App credentials | | ✅ OpenBao UI |
-| Application secrets | | ✅ OpenBao UI |
-| Application deployments | ✅ Argo CD | |
-
----
-
 ### Onboarding a new application
 
-1. Add three resources to `applications.tf` for the new application:
+1. Add 4 resources to `applications.tf` for the new application:
    - `vault_policy.<app>` — read-only access to `secret/data/<app>/*`
    - `vault_kubernetes_auth_backend_role.<app>` — binds service account to policy
    - `cloudflare_record.<app>` — DNS A record for `<app>.your-domain.com`
+   - `cloudflare_zero_trust_access_application` - Cloudflare access for the app.
 
    Then apply:
    ```bash
@@ -593,11 +571,8 @@ Phase 7    → recreate secrets in OpenBao UI (manual)
 ## Key Design Decisions
 
 ### GitOps ownership split
-The platform team owns infrastructure (Terraform) and application
-registration (Argo CD Application manifests). Application teams own
-their Helm chart values, ingress rules and namespace definitions.
-This separation allows application teams to deploy independently
-without platform team involvement after initial onboarding.
+infrastructure (Terraform) and app registration (Argo CD Application manifests).
+Application Helm chart values, ingress rules and namespace definitions.
 
 ### Organisation-wide GitHub App credential template
 A single GitHub App is installed at the organisation level. Argo CD
@@ -629,11 +604,6 @@ cert-manager, OpenBao). Worker nodes run application workloads.
 The `custom.kaas.infomaniak.cloud/node-role` label on each pool
 allows precise pod scheduling via `nodeSelector` in Helm values.
 
-### NGINX Ingress Controller over Cilium Gateway API
-The initial design used Cilium Gateway API. This was abandoned due
-to incompatibilities with Infomaniak's shared cluster — see the
-section below for details.
-
 ### F5 NGINX over community ingress-nginx
 The community ingress-nginx project reached end-of-life in March 2026.
 The F5/NGINX Inc. maintained controller was chosen as its replacement.
@@ -643,42 +613,9 @@ The `gavinbunney/kubectl` provider skips CRD validation at plan time,
 avoiding chicken-and-egg failures when CRDs are not yet installed.
 
 ### cert-manager with DNS-01 ACME challenge
-DNS-01 works before the ingress controller has an IP, supports wildcard
+DNS-01 works before the ingress controller has an IP, supports wildcard.  
 certificates, and uses Cloudflare for DNS record management.
 
-### Cloudflare Full Strict SSL
-Cloudflare proxies all traffic for DDoS protection and WAF. Full Strict
-SSL ensures end-to-end encryption between Cloudflare and NGINX using
-Let's Encrypt certificates provisioned by cert-manager.
-
----
-
-## Why Cilium Gateway API Was Not Used
-
-The initial architecture used Cilium Gateway API. This failed due to:
-
-### 1. Cilium operator crash
-After enabling `enable-gateway-api: "true"` in `cilium-config`, the
-Cilium operator crashed requiring `TLSRoute` in
-`gateway.networking.k8s.io/v1alpha2` which the standard channel CRDs
-mark as `served=false`.
-
-### 2. CRD channel conflict
-Switching to the experimental channel (which serves `v1alpha2`) is
-blocked by a `ValidatingAdmissionPolicy` installed by the standard
-channel:
-
-```
-Installing experimental CRDs on top of standard channel CRDs is
-prohibited by default.
-```
-
-### 3. Shared cluster impact
-Deleting the `ValidatingAdmissionPolicy` would affect all tenants on
-the shared cluster. The Cilium operator restart also caused a temporary
-network disruption for all tenants.
-
-### 4. Lesson learned
-On a shared managed cluster, cluster-level components should only be
-modified by the platform provider. If Cilium Gateway API support is
-needed, open a support ticket with Infomaniak.
+### Cloudflare proxy and access
+Cloudflare proxies all traffic for DDoS protection and WAF.  
+Cloudflare access to authenticate users at the cloudflare edge level.

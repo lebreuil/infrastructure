@@ -62,3 +62,8 @@ output "subnet_id" {
 
 data "cloudflare_ip_ranges" "cloudflare" {
 }
+
+data "cloudflare_zero_trust_access_policy" "my_user" {
+  account_id = var.cloudflare_account_id
+  policy_id = var.cloudflare_access_policy_id
+}

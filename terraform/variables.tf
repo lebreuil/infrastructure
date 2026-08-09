@@ -30,6 +30,11 @@ variable "os_cloud" {
 
 # Cloudflare related variables
 
+variable "cloudflare_account_id" {
+  description = "Cloudflare account ID for the Cloudflare Zero Trust Access application"
+  type        = string
+}
+
 variable "cloudflare_api_token" {
   description = "Cloudflare API token for DNS-01 ACME challenge"
   type        = string
@@ -38,6 +43,16 @@ variable "cloudflare_api_token" {
 
 variable "cloudflare_zone_id" {
   description = "Cloudflare Zone ID for your domain, found in the Cloudflare dashboard"
+  type        = string
+}
+
+variable "cloudflare_access_policy_id" {
+  description = "Cloudflare access policy, found in the Cloudflare dashboard"
+  type        = string
+}
+
+variable "cloudflare_zero_trust_access_identity_provider" {
+  description = "Cloudflare identity provider, found in the Cloudflare dashboard"
   type        = string
 }
 

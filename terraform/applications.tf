@@ -46,11 +46,32 @@
 resource "cloudflare_dns_record" "podinfo" {
   zone_id = var.cloudflare_zone_id
   name    = "podinfo"
-  ttl = 1
-  type = "A"
+  ttl     = 1
+  type    = "A"
   comment = "OpenBao DNS record managed by Terraform"
   content = kubernetes_ingress_v1.openbao.status.0.load_balancer.0.ingress.0.ip
   proxied = true
 
   depends_on = [helm_release.nginx_ingress]
+}
+
+# --- Podinfo (test) ---
+resource "cloudflare_zero_trust_access_application" "podinfo" {
+  account_id       = var.cloudflare_account_id
+  zone_id          = var.cloudflare_zone_id
+  name             = "Podinfo"
+  type             = "self_hosted"
+  session_duration = "8h"
+
+  destinations = [{
+    type = "public"
+    uri  = "podinfo.${var.domain}"
+  }]
+
+  auto_redirect_to_identity = true
+  allowed_idps = [var.cloudflare_zero_trust_access_identity_provider]
+
+  policies = [{
+    id = data.cloudflare_zero_trust_access_policy.my_user.id
+  }]
 }

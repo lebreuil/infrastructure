@@ -80,9 +80,9 @@ resource "kubernetes_ingress_v1" "openbao" {
           path_type = "Prefix"
           backend {
             service {
-              name = "openbao-ui"  # UI service
+              name = "openbao-ui" # UI service
               port {
-                number = 8200       # CHANGED from 80 to 8200
+                number = 8200 # CHANGED from 80 to 8200
               }
             }
           }
@@ -105,8 +105,8 @@ resource "kubernetes_ingress_v1" "openbao" {
 resource "cloudflare_dns_record" "openbao" {
   zone_id = var.cloudflare_zone_id
   name    = "openbao"
-  ttl = 1
-  type = "A"
+  ttl     = 1
+  type    = "A"
   comment = "OpenBao DNS record managed by Terraform"
   content = kubernetes_ingress_v1.openbao.status.0.load_balancer.0.ingress.0.ip
   proxied = true

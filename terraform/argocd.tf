@@ -87,8 +87,8 @@ resource "kubernetes_ingress_v1" "argocd" {
 resource "cloudflare_dns_record" "argocd" {
   zone_id = var.cloudflare_zone_id
   name    = "argocd"
-  ttl = 1
-  type = "A"
+  ttl     = 1
+  type    = "A"
   comment = "Argo CD DNS record managed by Terraform"
   content = kubernetes_ingress_v1.argocd.status.0.load_balancer.0.ingress.0.ip
   proxied = true
@@ -104,4 +104,24 @@ resource "kubectl_manifest" "app_of_apps" {
   yaml_body = file("${path.module}/../gitops/app-of-apps.yaml")
 
   depends_on = [helm_release.argocd]
+}
+
+resource "cloudflare_zero_trust_access_application" "argocd" {
+  account_id       = var.cloudflare_account_id
+  zone_id          = var.cloudflare_zone_id
+  name             = "argocd"
+  type             = "self_hosted"
+  session_duration = "8h"
+
+  destinations = [{
+    type = "public"
+    uri  = "argocd.${var.domain}"
+  }]
+
+  auto_redirect_to_identity = true
+  allowed_idps = [var.cloudflare_zero_trust_access_identity_provider]
+
+  policies = [{
+    id = data.cloudflare_zero_trust_access_policy.my_user.id
+  }]
 }

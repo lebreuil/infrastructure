@@ -157,7 +157,7 @@ if should_run 4; then
   apply "OpenBao deployment" \
     -target=helm_release.openbao \
     -target=kubernetes_ingress_v1.openbao \
-    -target=cloudflare_record.openbao
+    -target=cloudflare_dns_record.openbao
 
   warn "OpenBao deployed. Manual steps required before Phase 6:"
   echo ""
@@ -209,7 +209,7 @@ if should_run 6; then
   apply "Argo CD" \
     -target=helm_release.argocd \
     -target=kubernetes_ingress_v1.argocd \
-    -target=cloudflare_record.argocd
+    -target=cloudflare_dns_record.argocd
 
   apply "Cloudflare Access argocd" \
     -target=cloudflare_zero_trust_access_application.argocd
@@ -229,6 +229,9 @@ if should_run 7; then
   echo ""
   echo "  2. Argo CD repo server restarted to pick up credentials:"
   echo "     kubectl rollout restart deployment/argocd-repo-server -n argocd"
+  echo "  3. After deployment, retrieve the initial admin password with:"
+  echo "     kubectl -n argocd get secret argocd-initial-admin-secret "
+  echo "      -o jsonpath="{.data.password}" | base64 -d"
   echo ""
   echo "  3. Argo CD UI shows the GitHub organisation repository as connected"
 

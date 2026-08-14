@@ -7,7 +7,6 @@
 #   to generate the terraform token before applying this file.
 #
 # Prerequisites:
-#   1. openbao-bootstrap.tf applied with root token
 #   2. openbao_terraform_token set in terraform.tfvars
 
 provider "vault" {

@@ -74,8 +74,8 @@ platform/
 │   ├── argocd-values.yaml         # Argo CD Helm values (GitHub App config)
 │   └── openbao-values.yaml        # OpenBao Helm values
 └── gitops/
-    └── applications/
-        └── netbox-application.yaml  # Argo CD Application manifest
+    └── app-of-apps.yaml
+
 ```
 
 Application repositories follow this structure (managed by app teams):
@@ -243,6 +243,12 @@ or after a full cluster recreation.
 The deploy.sh script allows to get all of these action done in one go:  
 
 ```bash
+# initialise terraform
+terraform init
+
+# Make it executable
+chmod +x deploy.sh
+
 # Full deployment from scratch
 ./deploy.sh
 
@@ -383,11 +389,10 @@ kubectl exec -n openbao openbao-0 -- bao status
 
 #### Create the Terraform policy
 
-```bash
-kubectl exec -n openbao openbao-0 -- \
-  env BAO_TOKEN=<root-token> \
-  bao policy write terraform - << 'EOF'
+Login to the openbao ui with the root token.  
+Create the "terraform" policy
 
+```
 # KV secrets engine management
 path "secret/*" {
   capabilities = ["create", "read", "update", "delete", "list"]
@@ -433,22 +438,14 @@ path "auth/token/renew-self" {
 path "auth/token/lookup-self" {
   capabilities = ["read"]
 }
-EOF
-```
 
-#### verify that the policy eas created
-
-```bash
-kubectl exec -n openbao openbao-0 -- \
-  env BAO_TOKEN=<root-token> \
-  bao policy read terraform
 ```
 
 #### Create the dedicated Terraform token
 
 ```bash
 TOKEN=$(kubectl exec -n openbao openbao-0 -- \
-  env BAO_TOKEN=<root-token> \
+  env BAO_TOKEN=<root token> \
   bao token create \
     -policy=terraform \
     -display-name=terraform \
@@ -460,21 +457,7 @@ TOKEN=$(kubectl exec -n openbao openbao-0 -- \
 echo "Token: $TOKEN"
 ```
 
-#### Add the token to terraform.tfvars
-
-```bash
-echo "openbao_terraform_token = \"$TOKEN\"" >> terraform.tfvars
-```
-
-#### Verify the token has the correct permissions
-
-```bash
-kubectl exec -n openbao openbao-0 -- \
-  env BAO_TOKEN=$TOKEN \
-  bao token lookup -self
-```
-
----
+Add the token to terraform.tfvars
 
 ### Phase 5 — Apply OpenBao configuration
 
@@ -511,6 +494,10 @@ Create the github App.
 
 # Step 2 — Restart Argo CD repo server to pick up GitHub App credentials
 kubectl rollout restart deployment/argocd-repo-server -n argocd
+
+# After deployment, retrieve the initial admin password with:
+kubectl -n argocd get secret argocd-initial-admin-secret \
+  -o jsonpath="{.data.password}" | base64 -d
 
 # Step 3 — Platform team stores application secrets in OpenBao UI
 # Path: secret/<app-name>/config

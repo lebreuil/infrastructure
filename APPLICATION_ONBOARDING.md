@@ -1,7 +1,7 @@
 # Application Onboarding Guide
 
 This guide is for application owners who want to deploy their applications
-on the shared Kubernetes infrastructure managed by the platform team.
+on the shared Kubernetes infrastructure.
 
 **Developers do not have direct access to the cluster.** All interactions
 with your application happen through:

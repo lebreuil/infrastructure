@@ -56,6 +56,18 @@ variable "cloudflare_zero_trust_access_identity_provider" {
   type        = string
 }
 
+variable "cloudflare_access_client_id" {
+  description = "Cloudflare Access Client ID"
+  type        = string
+  sensitive   = true
+}
+
+variable "cloudflare_access_client_secret" {
+  description = "Cloudflare Access Client Secret"
+  type        = string
+  sensitive   = true
+}
+
 ## cert-manager related variables
 
 variable "letsencrypt_email" {

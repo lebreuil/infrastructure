@@ -34,7 +34,13 @@ All applications are deployed via **Argo CD** from GitHub repositories.
 
 ---
 
-## Cluster Layout
+## Prepare the infrastructure
+
+In the application.tf file definr the per-Application Openbao Policies and Roles and DNS Records.  
+
+## Constraints and Requirements
+
+### Cluster Layout
 
 The cluster has two node pools with dedicated roles:
 
@@ -48,9 +54,7 @@ The cluster has two node pools with dedicated roles:
 
 ---
 
-## Constraints and Requirements
-
-### 1. Namespace
+### Namespace
 
 Each application must have its own dedicated namespace. You have two options:
 
@@ -89,7 +93,7 @@ syncPolicy:
 
 ---
 
-### 2. Secrets
+### Secrets
 
 **Never commit plain secrets to GitHub.** Secrets are managed via
 OpenBao and injected directly into pods as files by the OpenBao Agent
@@ -201,7 +205,7 @@ command:
 
 ---
 
-### 3. Node Scheduling
+### Node Scheduling
 
 All application pods **must** include a `nodeSelector` to schedule on
 worker nodes. Without it, pods may land on management nodes and compete
@@ -240,7 +244,7 @@ valkey:
 
 ---
 
-### 4. Service Type
+### Service Type
 
 Always use `ClusterIP` for your application service. External access
 is handled by the NGINX Ingress Controller — **never use `LoadBalancer`
@@ -255,7 +259,7 @@ service:
 
 ---
 
-### 5. Ingress
+### Ingress
 
 External access to your application is provided via an `Ingress` resource
 using the shared NGINX Ingress Controller and cert-manager for TLS.
@@ -301,7 +305,7 @@ spec:
 
 ---
 
-### 6. Replica Management
+### Replica Management
 
 Avoid deploying unnecessary replicas for non-critical subcharts to
 preserve cluster resources. For example, if your chart includes Redis
@@ -317,7 +321,7 @@ redis:
 
 ---
 
-### 7. Liveness and Readiness Probes
+### Liveness and Readiness Probes
 
 If your application requires time to start (e.g. database migrations),
 increase the probe initial delay to avoid premature restarts:
@@ -338,7 +342,7 @@ readinessProbe:
 
 ---
 
-### 8. Persistence
+### Persistence
 
 Persistent volumes use the OpenStack Cinder CSI driver. If your
 application requires persistent storage:

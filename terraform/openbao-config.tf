@@ -1,19 +1,8 @@
 # OpenBao configuration — Kubernetes auth backend, platform policies
 # and per-application roles and DNS records.
 #
-# Provider:
-#   Uses the dedicated Terraform token created by openbao-bootstrap.tf.
-#   The root token is NOT used here. Apply openbao-bootstrap.tf first
-#   to generate the terraform token before applying this file.
-#
-# Prerequisites:
-#   2. openbao_terraform_token set in terraform.tfvars
 
-provider "vault" {
-  alias   = "terraform"
-  address = "https://openbao.${var.domain}"
-  token   = var.openbao_terraform_token
-}
+
 
 # ============================================================
 # KV Secrets Engine

@@ -119,7 +119,7 @@ resource "cloudflare_zero_trust_access_application" "argocd" {
   }]
 
   auto_redirect_to_identity = true
-  allowed_idps = [var.cloudflare_zero_trust_access_identity_provider]
+  allowed_idps              = [var.cloudflare_zero_trust_access_identity_provider]
 
   policies = [{
     id = data.cloudflare_zero_trust_access_policy.my_user.id

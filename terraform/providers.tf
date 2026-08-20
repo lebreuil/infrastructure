@@ -51,6 +51,22 @@ provider "kubectl" {
 provider "argocd" {
   server_addr = "argocd.${var.domain}:443"
   username    = "admin"
-  password    = var.argocd_admin_password
   insecure    = false
+}
+
+provider "vault" {
+  alias   = "terraform"
+  address = "https://openbao.${var.domain}"
+  token   = var.openbao_terraform_token
+
+  headers {
+    name  = "CF-Access-Client-Id"
+    value = var.cloudflare_access_client_id
+  }
+
+  headers {
+    name  = "CF-Access-Client-Secret"
+    value = var.cloudflare_access_client_secret
+  }
+
 }

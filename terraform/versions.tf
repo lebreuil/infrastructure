@@ -43,6 +43,11 @@ terraform {
       source  = "cloudflare/cloudflare"
       version = "~> 5.21"
     }
+
+    vault = {
+      source  = "hashicorp/vault"
+      version = "~> 5.10"
+    }
   }
 }
 

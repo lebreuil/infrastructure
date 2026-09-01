@@ -387,75 +387,8 @@ kubectl exec -n openbao openbao-0 -- bao status
 
 ```
 
-#### Create the Terraform policy
-
-Login to the openbao ui with the root token.  
-Create the "terraform" policy
-
-```
-# KV secrets engine management
-path "secret/*" {
-  capabilities = ["create", "read", "update", "delete", "list"]
-}
-
-# Auth backend management
-path "sys/auth/*" {
-  capabilities = ["create", "read", "update", "delete", "list", "sudo"]
-}
-
-path "auth/*" {
-  capabilities = ["create", "read", "update", "delete", "list", "sudo"]
-}
-
-# Policy management
-path "sys/policies/*" {
-  capabilities = ["create", "read", "update", "delete", "list"]
-}
-
-path "sys/policy/*" {
-  capabilities = ["create", "read", "update", "delete", "list"]
-}
-
-# Secrets engine mount management
-path "sys/mounts/*" {
-  capabilities = ["create", "read", "update", "delete", "list"]
-}
-
-path "sys/mounts" {
-  capabilities = ["read", "list"]
-}
-
-# Auth mount listing — needed by Vault provider initialization
-path "sys/auth" {
-  capabilities = ["read", "list"]
-}
-
-# Token self-management
-path "auth/token/renew-self" {
-  capabilities = ["update"]
-}
-
-path "auth/token/lookup-self" {
-  capabilities = ["read"]
-}
-
-```
-
-#### Create the dedicated Terraform token
-
-```bash
-TOKEN=$(kubectl exec -n openbao openbao-0 -- \
-  env BAO_TOKEN=<root token> \
-  bao token create \
-    -policy=terraform \
-    -display-name=terraform \
-    -no-default-policy \
-    -orphan \
-    -ttl=0 \
-    -field=token)
-
-echo "Token: $TOKEN"
-```
+Create the terraform token and policy.  
+Refer to SECRETS_MANAGEMENT.md for details.
 
 Add the token to terraform.tfvars
 
@@ -488,9 +421,9 @@ terraform apply -target=cloudflare_zero_trust_access_application.argocd
 Create the github App.  
 
 ```bash
-# Step 1 — Store GitHub App credentials in OpenBao UI
-# Path: secret/platform/argocd-github-app
-# Keys: app-id, installation-id, private-key
+
+# Step 1 — Use the  script/platform-secrets-init.py — Stores platform secrets in OpenBao
+# Refer to SECRETS_MANAGEMENT.md for details.
 
 # Step 2 — Restart Argo CD repo server to pick up GitHub App credentials
 kubectl rollout restart deployment/argocd-repo-server -n argocd
@@ -499,11 +432,6 @@ kubectl rollout restart deployment/argocd-repo-server -n argocd
 kubectl -n argocd get secret argocd-initial-admin-secret \
   -o jsonpath="{.data.password}" | base64 -d
 
-# Step 3 — Platform team stores application secrets in OpenBao UI
-# Path: secret/<app-name>/config
-
-# Step 4 — Argo CD automatically syncs all registered applications
-# No further action needed
 ```
 
 Next steps will require the worker nodes to be deployed.
@@ -547,7 +475,8 @@ Terraform resolves all dependencies automatically via `depends_on`.
    terraform apply
    ```
 
-2. Application team creates secrets in OpenBao UI at `secret/<app>/config`
+2. Application team creates secrets in OpenBao UI.
+Refer to SECRETS_MANAGEMENT.md for details
 
 3. Add `gitops/applications/<app>-application.yaml` to register the app in Argo CD
 

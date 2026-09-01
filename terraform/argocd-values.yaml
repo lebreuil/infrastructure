@@ -42,16 +42,15 @@ repoServer:
   podAnnotations:
     bao.openbao.org/agent-inject: "true"
     bao.openbao.org/role: "argocd"
-    # Inject GitHub App private key
-    bao.openbao.org/agent-inject-secret-github-app-key: "secret/data/platform/argocd-github-app"
+    bao.openbao.org/namespace: "platform"
+    bao.openbao.org/agent-inject-secret-github-app-key: "secret/data/argocd-github-app"
     bao.openbao.org/agent-inject-template-github-app-key: |
-      {{- with secret "secret/data/platform/argocd-github-app" -}}
+      {{- with secret "secret/data/argocd-github-app" -}}
       {{ .Data.data.private-key }}
       {{- end }}
-    # Inject GitHub App metadata (app-id and installation-id)
-    bao.openbao.org/agent-inject-secret-github-app-meta: "secret/data/platform/argocd-github-app"
+    bao.openbao.org/agent-inject-secret-github-app-meta: "secret/data/argocd-github-app"
     bao.openbao.org/agent-inject-template-github-app-meta: |
-      {{- with secret "secret/data/platform/argocd-github-app" -}}
+      {{- with secret "secret/data/argocd-github-app" -}}
       app-id={{ .Data.data.app-id }}
       installation-id={{ .Data.data.installation-id }}
       {{- end }}

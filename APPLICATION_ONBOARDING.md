@@ -108,6 +108,19 @@ OpenBao (secret store)
                 → your application reads secrets from files
 ```
 
+OpenBao Namespace architecture
+
+root namespace (Terraform token — namespace management only)
+    ├── platform/          # Argo CD credentials, platform secrets
+    │   ├── KV engine      (secret/)
+    │   ├── k8s auth       (argocd-repo-server service account)
+    │   └── policy         (argocd — read secret/argocd-github-app)
+    └── netbox/            # NetBox application team
+        ├── KV engine      (secret/)
+        ├── k8s auth       (netbox service account)
+        ├── policy         (netbox-read — injector sidecar)
+        └── policy         (netbox-write — app team token)
+
 #### Step 1 — configure openbao for the application
 
 you need

@@ -77,6 +77,11 @@ variable "letsencrypt_email" {
 
 ## openbao related variables
 
+variable "github_organization" {
+  description = "GitHub organization for the OpenBao instance"
+  type        = string
+}
+
 variable "openbao_terraform_token" {
   description = "Terraform token for the OpenBao instance"
   type        = string

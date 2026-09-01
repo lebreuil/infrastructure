@@ -73,7 +73,7 @@ The root token should **not** be used by Terraform or applications.
 
 The Terraform token is used by the Terraform pipeline to manage OpenBao.
 
-Terraform can create and manage:
+The Terraform token can create and manage:
 
 * child namespaces
 * secrets engines

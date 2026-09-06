@@ -5,9 +5,16 @@ on the shared Kubernetes infrastructure.
 
 **Developers do not have direct access to the cluster.** All interactions
 with your application happen through:
+
 - **GitHub** — for application manifests and Helm chart values
 - **Argo CD UI** — for deployment status, sync and troubleshooting
 - **OpenBao UI** — for secret management
+
+Platform operators should use the [Secrets Management guide](SECRETS_MANAGEMENT.md)
+to bootstrap OpenBao, create an application token, and initialise application
+secrets with `app-secrets-init.py`. Application owners use this guide to store
+and consume the secrets assigned to their application; they do not need the
+Terraform or OpenBao bootstrap tokens.
 
 ---
 
@@ -34,9 +41,12 @@ All applications are deployed via **Argo CD** from GitHub repositories.
 
 ---
 
-## Prepare the infrastructure
+## Prepare the Infrastructure
 
-In the application.tf file definr the per-Application Openbao Policies and Roles and DNS Records.  
+Before onboarding an application, the platform team adds its Kubernetes
+namespace, OpenBao namespace, policies, Kubernetes auth role, DNS record, and
+ingress configuration to Terraform. See the [Secrets Management guide](SECRETS_MANAGEMENT.md)
+for the OpenBao token and secret-initialisation workflow.
 
 ## Constraints and Requirements
 
@@ -50,7 +60,7 @@ The cluster has two node pools with dedicated roles:
 | Worker | `custom.kaas.infomaniak.cloud/node-role: worker` | Application workloads |
 
 **Your application pods must run on worker nodes.** See the
-[Node Scheduling](#3-node-scheduling) section for how to configure this.
+[Node Scheduling](#node-scheduling) section for how to configure this.
 
 ---
 
@@ -108,41 +118,53 @@ OpenBao (secret store)
                 → your application reads secrets from files
 ```
 
-OpenBao Namespace architecture
+OpenBao namespace architecture:
 
+```text
 root namespace (Terraform token — namespace management only)
     ├── platform/          # Argo CD credentials, platform secrets
     │   ├── KV engine      (secret/)
     │   ├── k8s auth       (argocd-repo-server service account)
     │   └── policy         (argocd — read secret/argocd-github-app)
-    └── netbox/            # NetBox application team
+    └── your-app/          # application team
         ├── KV engine      (secret/)
-        ├── k8s auth       (netbox service account)
-        ├── policy         (netbox-read — injector sidecar)
-        └── policy         (netbox-write — app team token)
+        ├── k8s auth       (your-app service account)
+        ├── policy         (your-app-read — injector sidecar)
+        └── policy         (your-app-write — application token)
+```
 
-#### Step 1 — configure openbao for the application
+#### Step 1 — Configure OpenBao for the application
 
-you need
+Provide the platform team with:
 
-- Your application name (used as the OpenBao path: `secret/your-app`)
-- Your namespace name
+- Your application name (used for the Kubernetes and OpenBao namespace)
+- The Kubernetes service account used by your pods
 - The list of secrets your application needs
 
-- Create a KV secret path for your application in OpenBao
-- Create an OpenBao policy granting read access to your path
-- Create a Kubernetes auth role binding your service account to the policy
-- Provide you with credentials to access the OpenBao UI
+The platform team then:
+
+- Creates an OpenBao namespace named `your-app`
+- Enables a KV v2 mount named `secret`
+- Creates read and write policies for the application
+- Creates a Kubernetes auth role binding the service account to the read policy
+- Provides access to the OpenBao UI, when the application team is responsible
+  for entering values
 
 #### Step 2 — Store your secrets via the OpenBao UI
 
 Access the OpenBao UI at `https://openbao.your-domain.com` using the
 credentials for your application:
 
-1. Navigate to **Secrets → secret → your-app**
-2. Click **Create new version**
-3. Add your key-value pairs (e.g. `db-password`, `api-key`)
-4. Click **Save**
+1. Select the `your-app` OpenBao namespace.
+2. Navigate to **Secrets → secret → config**.
+3. Click **Create new version**.
+4. Add the required key-value pairs (for example, `postgresql-password` and
+   `secret-key`).
+5. Click **Save**.
+
+The equivalent KV v2 API path is `secret/data/config`. If the platform team
+initialises generated application secrets with `app-secrets-init.py`, update
+the existing `config` secret in the UI instead of creating a second secret.
 
 #### Step 3 — Annotate your pods for secret injection
 
@@ -163,19 +185,19 @@ podAnnotations:
   # bao.openbao.org/agent-inject-secret-<filename>: "<openbao-path>"
   # bao.openbao.org/agent-inject-template-<filename>: "<template>"
 
-  # Example: inject db-password as /bao/secrets/db-password
-  bao.openbao.org/agent-inject-secret-db-password: "secret/data/your-app"
-  bao.openbao.org/agent-inject-template-db-password: |
-    {{- with secret "secret/data/your-app" -}}
-    {{ .Data.data.db-password }}
+  # Example: inject the PostgreSQL password as /bao/secrets/postgresql-password
+  bao.openbao.org/agent-inject-secret-postgresql-password: "secret/data/config"
+  bao.openbao.org/agent-inject-template-postgresql-password: |
+    {{- with secret "secret/data/config" -}}
+    {{ .Data.data.postgresql-password }}
     {{- end }}
 
   # Example: inject all secrets as a config file /bao/secrets/config
-  bao.openbao.org/agent-inject-secret-config: "secret/data/your-app"
+  bao.openbao.org/agent-inject-secret-config: "secret/data/config"
   bao.openbao.org/agent-inject-template-config: |
-    {{- with secret "secret/data/your-app" -}}
-    DB_PASSWORD={{ .Data.data.db-password }}
-    API_KEY={{ .Data.data.api-key }}
+    {{- with secret "secret/data/config" -}}
+    POSTGRESQL_PASSWORD={{ .Data.data.postgresql-password }}
+    SECRET_KEY={{ .Data.data.secret-key }}
     {{- end }}
 ```
 
@@ -190,7 +212,7 @@ environment variables:
 # Example: pass secret file path as environment variable
 env:
   - name: DB_PASSWORD_FILE
-    value: /bao/secrets/db-password
+    value: /bao/secrets/postgresql-password
 ```
 
 Or source the config file directly if your application supports it:
@@ -201,7 +223,7 @@ command:
   - sh
   - -c
   - |
-    export DB_PASSWORD=$(cat /bao/secrets/db-password)
+    export DB_PASSWORD=$(cat /bao/secrets/postgresql-password)
     exec your-app-entrypoint
 ```
 
@@ -555,7 +577,9 @@ Before submitting your application for deployment, verify:
 - [ ] Namespace strategy chosen — `CreateNamespace=true` or explicit `namespace.yaml`
 - [ ] No plain secrets committed to GitHub
 - [ ] OpenBao access requested from the platform team
-- [ ] Secrets stored via the OpenBao UI
+- [ ] Secrets stored in the `your-app` OpenBao namespace at `secret/config`
+  (via the OpenBao UI or the platform-managed initialisation workflow in the
+  [Secrets Management guide](SECRETS_MANAGEMENT.md))
 - [ ] Pod annotations added for OpenBao Agent Injector (`bao.openbao.org/agent-inject: "true"`)
 - [ ] Application reads secrets from files at `/bao/secrets/` not environment variables
 - [ ] `nodeSelector: custom.kaas.infomaniak.cloud/node-role: worker` set on all pods

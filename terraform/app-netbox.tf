@@ -7,6 +7,18 @@ resource "kubernetes_namespace_v1" "netbox" {
   }
 }
 
+# Used only by External Secrets Operator to authenticate to OpenBao when it
+# reconciles NetBox's ExternalSecret. It is deliberately separate from the
+# NetBox workload service account.
+resource "kubernetes_service_account_v1" "netbox_secret_sync" {
+  metadata {
+    name      = "netbox-secret-sync"
+    namespace = kubernetes_namespace_v1.netbox.metadata[0].name
+  }
+
+  automount_service_account_token = true
+}
+
 # ============================================================
 # OpenBao Application Namespaces
 # Each application gets its own isolated OpenBao namespace.
@@ -112,6 +124,27 @@ resource "vault_kubernetes_auth_backend_role" "netbox" {
   depends_on = [
     vault_auth_backend.netbox_kubernetes,
     vault_policy.netbox_read
+  ]
+}
+
+# External Secrets Operator authenticates as this dedicated service account
+# and receives only the NetBox read policy. Keep the existing "netbox" role
+# during the Agent Injector-to-ESO migration; remove it only after the chart
+# no longer uses injector annotations.
+resource "vault_kubernetes_auth_backend_role" "netbox_secret_sync" {
+  provider                         = vault.terraform
+  namespace                        = vault_namespace.netbox.path
+  backend                          = vault_auth_backend.netbox_kubernetes.path
+  role_name                        = "netbox-secret-sync"
+  bound_service_account_names      = [kubernetes_service_account_v1.netbox_secret_sync.metadata[0].name]
+  bound_service_account_namespaces = [kubernetes_namespace_v1.netbox.metadata[0].name]
+  token_policies                   = [vault_policy.netbox_read.name]
+  token_ttl                        = 3600
+
+  depends_on = [
+    kubernetes_service_account_v1.netbox_secret_sync,
+    vault_auth_backend.netbox_kubernetes,
+    vault_policy.netbox_read,
   ]
 }
 

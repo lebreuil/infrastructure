@@ -35,8 +35,8 @@ Keep changes focused on the relevant Terraform file:
   pull requests, or chat.
 - Use the existing sensitive variables and provider authentication mechanisms.
   Do not hard-code credentials or create new Kubernetes Secrets for
-  application secrets. OpenBao Agent Injector is the intended application
-  secret-delivery mechanism.
+  application secrets. External Secrets Operator is the intended mechanism for
+  synchronizing OpenBao values into namespace-local Kubernetes Secrets.
 - `clouds.yaml` is expected at `~/.config/openstack/clouds.yaml`; use the
   configured `os_cloud` variable rather than embedding OpenStack credentials.
 - OpenBao is Vault API-compatible and is configured through the aliased

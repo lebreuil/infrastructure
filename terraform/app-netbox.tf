@@ -7,9 +7,8 @@ resource "kubernetes_namespace_v1" "netbox" {
   }
 }
 
-# Used only by External Secrets Operator to authenticate to OpenBao when it
-# reconciles NetBox's ExternalSecret. It is deliberately separate from the
-# NetBox workload service account.
+# Used by External Secrets Operator's SecretStore to authenticate to OpenBao.
+# It is deliberately separate from the NetBox workload service account.
 resource "kubernetes_service_account_v1" "netbox_secret_sync" {
   metadata {
     name      = "netbox-secret-sync"
@@ -17,6 +16,62 @@ resource "kubernetes_service_account_v1" "netbox_secret_sync" {
   }
 
   automount_service_account_token = true
+}
+
+# ESO must be able to create a token only for the service account referenced by
+# this namespace's SecretStore. The controller's other permissions come from
+# its namespace-scoped Helm RBAC.
+resource "kubernetes_role_v1" "netbox_secret_sync_token" {
+  metadata {
+    name      = "netbox-secret-sync-token"
+    namespace = kubernetes_namespace_v1.netbox.metadata[0].name
+  }
+
+  rule {
+    api_groups     = [""]
+    resources      = ["serviceaccounts/token"]
+    resource_names = [kubernetes_service_account_v1.netbox_secret_sync.metadata[0].name]
+    verbs          = ["create"]
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["secrets"]
+    verbs      = ["get", "list", "watch", "create", "update", "delete", "patch"]
+  }
+
+  rule {
+    api_groups = ["external-secrets.io"]
+    resources  = ["secretstores/status", "secretstores/finalizers", "externalsecrets/status", "externalsecrets/finalizers"]
+    verbs      = ["get", "update", "patch"]
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["events"]
+    verbs      = ["create", "patch"]
+  }
+}
+
+resource "kubernetes_role_binding_v1" "netbox_secret_sync_token" {
+  metadata {
+    name      = "netbox-secret-sync-token"
+    namespace = kubernetes_namespace_v1.netbox.metadata[0].name
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Role"
+    name      = kubernetes_role_v1.netbox_secret_sync_token.metadata[0].name
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = "external-secrets-controller"
+    namespace = "external-secrets"
+  }
+
+  depends_on = [helm_release.external_secrets]
 }
 
 # ============================================================
@@ -33,11 +88,11 @@ resource "vault_namespace" "netbox" {
 
 # KV secrets engine within the NetBox namespace
 resource "vault_mount" "netbox_kv" {
-  provider  = vault.terraform
-  namespace = vault_namespace.netbox.path
-  path      = "secret"
-  type      = "kv"
-  options   = { version = "2" }
+  provider    = vault.terraform
+  namespace   = vault_namespace.netbox.path
+  path        = "secret"
+  type        = "kv"
+  options     = { version = "2" }
   description = "KV v2 secrets engine for NetBox application secrets"
 
   depends_on = [vault_namespace.netbox]
@@ -64,7 +119,7 @@ resource "vault_kubernetes_auth_backend_config" "netbox" {
   depends_on = [vault_auth_backend.netbox_kubernetes]
 }
 
-# Read-only policy for the injector sidecar — within NetBox namespace
+# Read-only policy for the NetBox SecretStore — within NetBox namespace
 resource "vault_policy" "netbox_read" {
   provider  = vault.terraform
   namespace = vault_namespace.netbox.path
@@ -110,27 +165,9 @@ resource "vault_policy" "netbox_write" {
   depends_on = [vault_namespace.netbox]
 }
 
-# Kubernetes auth role for the injector sidecar
-resource "vault_kubernetes_auth_backend_role" "netbox" {
-  provider                         = vault.terraform
-  namespace                        = vault_namespace.netbox.path
-  backend                          = vault_auth_backend.netbox_kubernetes.path
-  role_name                        = "netbox"
-  bound_service_account_names      = ["netbox"]
-  bound_service_account_namespaces = ["netbox"]
-  token_policies                   = [vault_policy.netbox_read.name]
-  token_ttl                        = 3600
-
-  depends_on = [
-    vault_auth_backend.netbox_kubernetes,
-    vault_policy.netbox_read
-  ]
-}
-
-# External Secrets Operator authenticates as this dedicated service account
-# and receives only the NetBox read policy. Keep the existing "netbox" role
-# during the Agent Injector-to-ESO migration; remove it only after the chart
-# no longer uses injector annotations.
+# This role, the bound service account, and the token permissions are all
+# platform-managed so application teams cannot grant themselves other OpenBao
+# policies or namespaces.
 resource "vault_kubernetes_auth_backend_role" "netbox_secret_sync" {
   provider                         = vault.terraform
   namespace                        = vault_namespace.netbox.path

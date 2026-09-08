@@ -41,8 +41,8 @@ NGINX Ingress Controller (management nodes)
     └── *.your-domain.com       → Application workloads (worker nodes)
 
 Secret management:
-    OpenBao → Agent Injector sidecar → secrets as files in /bao/secrets/
-    (secrets are NEVER stored as Kubernetes Secrets)
+    OpenBao → External Secrets Operator → namespace-local Kubernetes Secret
+    (each application's SecretStore and ExternalSecret are namespace-scoped)
 
 GitHub access:
     GitHub App (organisation-wide) → Argo CD credential template
@@ -146,7 +146,7 @@ created in `openbao-config.tf` as part of each application onboarding.
 
 | Resource | Type | Purpose |
 |---|---|---|
-| `openbao` | `helm_release` | Deploys OpenBao with Agent Injector |
+| `openbao` | `helm_release` | Deploys OpenBao |
 | `openbao` | `cloudflare_record` | `openbao.your-domain.com` → NGINX IP |
 
 ### `openbao-config.tf` — OpenBao configuration + per-application onboarding
@@ -171,7 +171,7 @@ and a Cloudflare DNS record.
 | Resource | Type | Purpose |
 |---|---|---|
 | `netbox` | `vault_policy` | Read-only policy for NetBox secrets |
-| `netbox` | `vault_kubernetes_auth_backend_role` | Role for NetBox agent injector |
+| `netbox` | `vault_kubernetes_auth_backend_role` | Role for NetBox ESO synchronization |
 | `netbox` | `cloudflare_record` | `netbox.your-domain.com` → NGINX IP |
 
 ### `gitops/applications/netbox-application.yaml` — NetBox Argo CD Application
@@ -464,9 +464,9 @@ Terraform resolves all dependencies automatically via `depends_on`.
 
 ### Onboarding a new application
 
-1. Add 4 resources to `applications.tf` for the new application:
-   - `vault_policy.<app>` — read-only access to `secret/data/<app>/*`
-   - `vault_kubernetes_auth_backend_role.<app>` — binds service account to policy
+1. Add the application namespace, dedicated ESO sync service account, and
+   OpenBao namespace/policies/auth role. The application repository owns the
+   namespace-local `SecretStore` and `ExternalSecret`. Also add:
    - `cloudflare_record.<app>` — DNS A record for `<app>.your-domain.com`
    - `cloudflare_zero_trust_access_application` - Cloudflare access for the app.
 
@@ -480,7 +480,9 @@ Refer to SECRETS_MANAGEMENT.md for details
 
 3. Add `gitops/applications/<app>-application.yaml` to register the app in Argo CD
 
-4. Argo CD automatically syncs the application — DNS and TLS are already in place
+4. Commit the namespace-local `SecretStore` and `ExternalSecret` with the
+   application manifests. Argo CD reconciles them and the application — DNS
+   and TLS are already in place.
 
 ---
 
@@ -498,12 +500,17 @@ organisation automatically accessible without per-repository
 configuration. New application repositories need no Argo CD credential
 changes.
 
-### OpenBao Agent Injector over Kubernetes Secrets
-Secrets are never stored as Kubernetes Secrets. The OpenBao Agent
-Injector injects a sidecar into application pods that fetches secrets
-directly from OpenBao and writes them as files to an in-memory tmpfs
-volume at `/bao/secrets/`. This means secrets exist only in OpenBao
-and in pod memory — they are never persisted to etcd.
+### External Secrets Operator
+External Secrets Operator synchronizes each application's OpenBao KV secret
+into a Kubernetes Secret in the same namespace. Each application uses a
+dedicated OpenBao namespace, Kubernetes auth role, and namespace-local
+`SecretStore`. A single ESO controller is shared by the cluster: it has
+cluster-wide discovery permissions for ESO resources but no cluster-wide
+Secret permissions. Terraform adds a namespaced Role/RoleBinding for each
+registered application, limiting Secret access, status updates, and service
+account token creation to that namespace. Adding an application therefore
+requires registering its namespace-specific RBAC and OpenBao auth resources;
+the ESO Helm release itself is not duplicated.
 
 ### Per-application DNS records
 Each application gets its own Cloudflare DNS A record created as part

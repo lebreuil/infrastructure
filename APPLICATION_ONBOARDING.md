@@ -33,8 +33,8 @@ NGINX Ingress Controller
     └── other-app.your-domain.com → other application
 
 Secret management:
-    OpenBao → Agent Injector sidecar → secrets as files in /bao/secrets/
-    (secrets are NEVER stored as Kubernetes Secrets)
+    OpenBao → External Secrets Operator → namespace-local Kubernetes Secret
+    (the SecretStore and ExternalSecret are namespace-scoped)
 ```
 
 All applications are deployed via **Argo CD** from GitHub repositories.
@@ -88,8 +88,6 @@ kind: Namespace
 metadata:
   name: your-app
   labels:
-    # example: enable OpenBao agent injection for all pods in this namespace
-    bao.openbao.org/agent-injection: "enabled"
 ```
 
 And set `CreateNamespace=false` in your sync options to prevent Argo CD
@@ -105,17 +103,18 @@ syncPolicy:
 
 ### Secrets
 
-**Never commit plain secrets to GitHub.** Secrets are managed via
-OpenBao and injected directly into pods as files by the OpenBao Agent
-Injector. **Secrets are never stored as Kubernetes Secrets** — they
-exist only in OpenBao and in the memory of your running pods.
+**Never commit plain secrets to GitHub.** Secrets are managed in OpenBao and
+synchronized by External Secrets Operator into a Kubernetes Secret in the
+application namespace. The Secret is namespace-scoped and should only be
+consumed by workloads in that namespace.
 
 ```
 OpenBao (secret store)
-    → Agent Injector (mutating webhook — auto-injects sidecar)
-        → OpenBao Agent sidecar (fetches secrets at pod startup)
-            → secrets written as files to /bao/secrets/ in your pod
-                → your application reads secrets from files
+    → namespace-local SecretStore (Kubernetes auth)
+        → one shared External Secrets Operator controller
+            (namespace permissions are granted only for registered applications)
+            → ExternalSecret
+                → Kubernetes Secret in your namespace
 ```
 
 OpenBao namespace architecture:
@@ -124,12 +123,12 @@ OpenBao namespace architecture:
 root namespace (Terraform token — namespace management only)
     ├── platform/          # Argo CD credentials, platform secrets
     │   ├── KV engine      (secret/)
-    │   ├── k8s auth       (argocd-repo-server service account)
+    │   ├── k8s auth       (argocd-secret-sync service account)
     │   └── policy         (argocd — read secret/argocd-github-app)
     └── your-app/          # application team
         ├── KV engine      (secret/)
-        ├── k8s auth       (your-app service account)
-        ├── policy         (your-app-read — injector sidecar)
+        ├── k8s auth       (ESO sync service account)
+        ├── policy         (your-app-read — ESO SecretStore)
         └── policy         (your-app-write — application token)
 ```
 
@@ -138,15 +137,18 @@ root namespace (Terraform token — namespace management only)
 Provide the platform team with:
 
 - Your application name (used for the Kubernetes and OpenBao namespace)
-- The Kubernetes service account used by your pods
-- The list of secrets your application needs
+- The application namespace (the platform team creates a dedicated ESO sync
+  service account; application pod service accounts are not granted OpenBao
+  access)
+
 
 The platform team then:
 
 - Creates an OpenBao namespace named `your-app`
 - Enables a KV v2 mount named `secret`
-- Creates read and write policies for the application
-- Creates a Kubernetes auth role binding the service account to the read policy
+- Creates read and write policies for the application team
+- Creates the dedicated sync service account, its narrowly scoped ESO token
+  permission, and the Kubernetes auth role binding it to the read policy
 - Provides access to the OpenBao UI, when the application team is responsible
   for entering values
 
@@ -166,77 +168,74 @@ The equivalent KV v2 API path is `secret/data/config`. If the platform team
 initialises generated application secrets with `app-secrets-init.py`, update
 the existing `config` secret in the UI instead of creating a second secret.
 
-#### Step 3 — Annotate your pods for secret injection
+#### Step 3 — Declare the ESO resources in your application manifests
 
-Add annotations to your pod template in your Helm values. The OpenBao
-Agent Injector automatically detects these annotations via a mutating
-webhook and injects a sidecar that fetches secrets from OpenBao:
-
-```yaml
-# In your values.yaml
-podAnnotations:
-  # Enable secret injection
-  bao.openbao.org/agent-inject: "true"
-
-  # OpenBao auth role (must match the role created by the platform team)
-  bao.openbao.org/role: "your-app"
-
-  # One pair of annotations per secret file:
-  # bao.openbao.org/agent-inject-secret-<filename>: "<openbao-path>"
-  # bao.openbao.org/agent-inject-template-<filename>: "<template>"
-
-  # Example: inject the PostgreSQL password as /bao/secrets/postgresql-password
-  bao.openbao.org/agent-inject-secret-postgresql-password: "secret/data/config"
-  bao.openbao.org/agent-inject-template-postgresql-password: |
-    {{- with secret "secret/data/config" -}}
-    {{ .Data.data.postgresql-password }}
-    {{- end }}
-
-  # Example: inject all secrets as a config file /bao/secrets/config
-  bao.openbao.org/agent-inject-secret-config: "secret/data/config"
-  bao.openbao.org/agent-inject-template-config: |
-    {{- with secret "secret/data/config" -}}
-    POSTGRESQL_PASSWORD={{ .Data.data.postgresql-password }}
-    SECRET_KEY={{ .Data.data.secret-key }}
-    {{- end }}
-```
-
-Secrets are available inside your pod at `/bao/secrets/<filename>`.
-
-#### Step 4 — Read secrets from files in your application
-
-Configure your application to read secrets from files rather than
-environment variables:
+The application team owns the namespace-local `SecretStore` and
+`ExternalSecret`. Commit them to the application repository so Argo CD
+reconciles them with the rest of the application. The platform team creates
+and provides the fixed sync service account name and OpenBao auth role; do not
+use a `ClusterSecretStore` or a service account from another namespace.
 
 ```yaml
-# Example: pass secret file path as environment variable
-env:
-  - name: DB_PASSWORD_FILE
-    value: /bao/secrets/postgresql-password
+apiVersion: external-secrets.io/v1
+kind: SecretStore
+metadata:
+  name: openbao
+  namespace: your-app
+spec:
+  provider:
+    vault:
+      server: https://openbao.your-domain.com
+      path: secret
+      version: v2
+      namespace: your-app
+      auth:
+        kubernetes:
+          mountPath: kubernetes
+          role: your-app-secret-sync
+          serviceAccountRef:
+            name: your-app-secret-sync
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: your-app-secrets
+  namespace: your-app
+spec:
+  refreshInterval: 1m
+  secretStoreRef:
+    name: openbao
+    kind: SecretStore
+  target:
+    name: your-app-secrets
+    creationPolicy: Owner
+  dataFrom:
+    - extract:
+        key: config
 ```
 
-Or source the config file directly if your application supports it:
+The `SecretStore` and `ExternalSecret` must use the same namespace as the
+application. The OpenBao `namespace`, auth `role`, and service account name
+must match the values supplied by the platform team.
+
+#### Step 4 — Reference the synchronized Kubernetes Secret
+
+The `ExternalSecret` synchronizes the OpenBao KV v2 secret at `secret/config`
+to a Kubernetes Secret in the same namespace. Reference that Secret from your
+Helm values:
 
 ```yaml
-# Example: sourcing all secrets from a config file
-command:
-  - sh
-  - -c
-  - |
-    export DB_PASSWORD=$(cat /bao/secrets/postgresql-password)
-    exec your-app-entrypoint
+envFrom:
+  - secretRef:
+      name: your-app-secrets
 ```
 
-#### Important notes on secret injection
+The synchronized Secret is updated periodically by ESO. Applications that
+require a specific key can use `secretKeyRef` instead of `envFrom`.
 
-- The injector runs as a **mutating webhook** — pods without the
-  `bao.openbao.org/agent-inject: "true"` annotation are not affected
-- The agent sidecar runs alongside your container and renews secrets
-  automatically before they expire
-- If OpenBao is sealed or unreachable, pods will **fail to start** —
-  contact the platform team if this happens
-- Secrets are written to an **in-memory tmpfs volume** shared between
-  the agent sidecar and your container — they are never written to disk
+If OpenBao is sealed or unreachable, ESO reports the sync failure on the
+`ExternalSecret` resource and retains the last successfully synchronized
+Secret. Contact the platform team if the resource is not `Ready`.
 
 ---
 
@@ -455,7 +454,7 @@ your-app-repo/
 ├── deploy/
 │   ├── namespace.yaml          # Namespace definition (optional)
 │   ├── ingress.yaml            # NGINX Ingress resource
-│   └── values.yaml             # Helm chart values (including injector annotations)
+│   └── values.yaml             # Helm chart values (including Secret references)
 └── Chart.yaml                  # if this repo IS the Helm chart
 ```
 
@@ -468,12 +467,14 @@ your-app-repo/
     ├── ingress.yaml
     └── helm/
         ├── Chart.yaml          # references the upstream chart as dependency
-        └── values.yaml         # your custom values including podAnnotations
+        └── values.yaml         # your custom values including Secret references
 ```
 
-Note there is no `external-secret.yaml` — secrets are injected directly
-into pods by the OpenBao Agent Injector via pod annotations defined in
-`values.yaml`. No Kubernetes Secret resources are created.
+The application team owns the namespace-local `SecretStore` and
+`ExternalSecret`. The platform team owns the controller and the per-namespace
+RBAC that lets it read and write only registered application namespaces.
+Application repositories must not define a `ClusterSecretStore` or
+cross-namespace secret reference.
 
 ---
 
@@ -515,8 +516,7 @@ Click on a **Pod** → **Logs** tab in the Argo CD UI to see:
 - Init container logs (useful for secret injection failures)
 - Previous container logs (useful after a crash)
 
-Select the container from the dropdown if your pod has multiple
-containers (e.g. your app + the OpenBao agent sidecar).
+Select the container from the dropdown if your pod has multiple containers.
 
 ### Triggering a Manual Sync
 
@@ -576,12 +576,11 @@ Before submitting your application for deployment, verify:
 
 - [ ] Namespace strategy chosen — `CreateNamespace=true` or explicit `namespace.yaml`
 - [ ] No plain secrets committed to GitHub
-- [ ] OpenBao access requested from the platform team
+- [ ] OpenBao access and the ESO sync service account provided by the platform team
 - [ ] Secrets stored in the `your-app` OpenBao namespace at `secret/config`
   (via the OpenBao UI or the platform-managed initialisation workflow in the
   [Secrets Management guide](SECRETS_MANAGEMENT.md))
-- [ ] Pod annotations added for OpenBao Agent Injector (`bao.openbao.org/agent-inject: "true"`)
-- [ ] Application reads secrets from files at `/bao/secrets/` not environment variables
+- [ ] Application references the synchronized `<app>-secrets` Kubernetes Secret
 - [ ] `nodeSelector: custom.kaas.infomaniak.cloud/node-role: worker` set on all pods
 - [ ] `service.type: ClusterIP` (never `LoadBalancer` or `NodePort`)
 - [ ] `Ingress` resource defined with `ingressClassName: nginx`
@@ -604,8 +603,8 @@ troubleshoot or escalate:
 | Application not syncing | Check the **Sync** status in Argo CD UI → look at **Events** tab |
 | Pod not starting | Check pod **Events** and **Logs** in Argo CD UI |
 | Pod in `CrashLoopBackOff` | Check **Logs → Previous** in Argo CD UI |
-| Secret injection failing | Check **Logs → vault-agent-init** container in Argo CD UI |
-| Secrets not refreshing | Check **Logs → vault-agent** container in Argo CD UI |
+| Secret synchronization failing | Ask the platform team to inspect the `ExternalSecret` status and events |
+| Secrets not refreshing | Ask the platform team to inspect ESO controller logs and the `ExternalSecret` refresh time |
 | Certificate not issuing | Check the `certificate` resource status in Argo CD UI |
 | Pod not scheduling | Check pod **Events** in Argo CD UI for node affinity errors |
 | OpenBao sealed or unreachable | Contact platform team |

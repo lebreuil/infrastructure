@@ -25,6 +25,168 @@ resource "helm_release" "argocd" {
   ]
 }
 
+resource "kubernetes_service_account_v1" "argocd_secret_sync" {
+  metadata {
+    name      = "argocd-secret-sync"
+    namespace = "argocd"
+  }
+
+  automount_service_account_token = true
+
+  depends_on = [helm_release.argocd]
+}
+
+resource "kubernetes_role_v1" "argocd_secret_sync" {
+  metadata {
+    name      = "argocd-secret-sync"
+    namespace = "argocd"
+  }
+
+  rule {
+    api_groups     = [""]
+    resources      = ["serviceaccounts/token"]
+    resource_names = [kubernetes_service_account_v1.argocd_secret_sync.metadata[0].name]
+    verbs          = ["create"]
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["secrets"]
+    verbs      = ["get", "list", "watch", "create", "update", "delete", "patch"]
+  }
+
+  rule {
+    api_groups = ["external-secrets.io"]
+    resources  = ["secretstores/status", "secretstores/finalizers", "externalsecrets/status", "externalsecrets/finalizers"]
+    verbs      = ["get", "update", "patch"]
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["events"]
+    verbs      = ["create", "patch"]
+  }
+}
+
+resource "kubernetes_role_binding_v1" "argocd_secret_sync" {
+  metadata {
+    name      = "argocd-secret-sync"
+    namespace = "argocd"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Role"
+    name      = kubernetes_role_v1.argocd_secret_sync.metadata[0].name
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = "external-secrets-controller"
+    namespace = "external-secrets"
+  }
+
+  depends_on = [helm_release.external_secrets]
+}
+
+resource "kubectl_manifest" "argocd_secret_store" {
+  yaml_body = yamlencode({
+    apiVersion = "external-secrets.io/v1"
+    kind       = "SecretStore"
+    metadata = {
+      name      = "openbao"
+      namespace = "argocd"
+    }
+    spec = {
+      provider = {
+        vault = {
+          server    = "https://openbao.${var.domain}"
+          path      = "secret"
+          version   = "v2"
+          namespace = "platform"
+          auth = {
+            kubernetes = {
+              mountPath = "kubernetes"
+              role      = "argocd-secret-sync"
+              serviceAccountRef = {
+                name = kubernetes_service_account_v1.argocd_secret_sync.metadata[0].name
+              }
+            }
+          }
+        }
+      }
+    }
+  })
+
+  depends_on = [
+    helm_release.external_secrets,
+    kubernetes_service_account_v1.argocd_secret_sync,
+    vault_kubernetes_auth_backend_role.argocd,
+  ]
+}
+
+resource "kubectl_manifest" "argocd_external_secret" {
+  yaml_body = yamlencode({
+    apiVersion = "external-secrets.io/v1"
+    kind       = "ExternalSecret"
+    metadata = {
+      name      = "github-org-creds"
+      namespace = "argocd"
+    }
+    spec = {
+      refreshInterval = "1m"
+      secretStoreRef = {
+        name = "openbao"
+        kind = "SecretStore"
+      }
+      target = {
+        name           = "github-org-creds"
+        creationPolicy = "Owner"
+        template = {
+          metadata = {
+            labels = {
+              "argocd.argoproj.io/secret-type" = "repo-creds"
+            }
+          }
+          type = "Opaque"
+          data = {
+            type                    = "git"
+            url                     = "https://github.com/${var.github_organization}"
+            githubAppID             = "{{ .githubAppID }}"
+            githubAppInstallationID = "{{ .githubAppInstallationID }}"
+            githubAppPrivateKey     = "{{ .githubAppPrivateKey }}"
+          }
+        }
+      }
+      data = [
+        {
+          secretKey = "githubAppID"
+          remoteRef = {
+            key      = "argocd-github-app"
+            property = "app-id"
+          }
+        },
+        {
+          secretKey = "githubAppInstallationID"
+          remoteRef = {
+            key      = "argocd-github-app"
+            property = "installation-id"
+          }
+        },
+        {
+          secretKey = "githubAppPrivateKey"
+          remoteRef = {
+            key      = "argocd-github-app"
+            property = "private-key"
+          }
+        },
+      ]
+    }
+  })
+
+  depends_on = [kubectl_manifest.argocd_secret_store]
+}
+
 # cert-manager annotation automatically provisions and renews
 # the TLS certificate for this Ingress via the letsencrypt-prod
 # ClusterIssuer.

@@ -17,8 +17,77 @@ resource "helm_release" "external_secrets" {
     {
       name  = "installCRDs"
       value = "true"
+    },
+    {
+      name  = "rbac.create"
+      value = "false"
+    },
+    {
+      name  = "serviceAccount.name"
+      value = "external-secrets-controller"
+    },
+    {
+      name  = "processClusterExternalSecret"
+      value = "false"
+    },
+    {
+      name  = "processClusterStore"
+      value = "false"
+    },
+    {
+      name  = "processClusterGenerator"
+      value = "false"
+    },
+    {
+      name  = "processClusterPushSecret"
+      value = "false"
+    },
+    {
+      name  = "rbac.serviceAccountTokenCreate"
+      value = "false"
     }
   ]
 
   depends_on = [infomaniak_kaas_instance_pool.workers]
+}
+
+# The controller can discover ESO resources cluster-wide, but it receives no
+# cluster-wide Secret permissions. Each application namespace adds a
+# namespaced Role/RoleBinding in its app-*.tf file.
+resource "kubernetes_cluster_role_v1" "external_secrets_controller" {
+  metadata {
+    name = "external-secrets-controller"
+  }
+
+  rule {
+    api_groups = ["external-secrets.io"]
+    resources  = ["secretstores", "externalsecrets"]
+    verbs      = ["get", "list", "watch"]
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["namespaces", "serviceaccounts"]
+    verbs      = ["get", "list", "watch"]
+  }
+}
+
+resource "kubernetes_cluster_role_binding_v1" "external_secrets_controller" {
+  metadata {
+    name = "external-secrets-controller"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = kubernetes_cluster_role_v1.external_secrets_controller.metadata[0].name
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = "external-secrets-controller"
+    namespace = "external-secrets"
+  }
+
+  depends_on = [helm_release.external_secrets]
 }

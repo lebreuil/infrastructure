@@ -65,8 +65,8 @@ resource "vault_kubernetes_auth_backend_role" "argocd" {
   provider                         = vault.terraform
   namespace                        = vault_namespace.platform.path
   backend                          = vault_auth_backend.platform_kubernetes.path
-  role_name                        = "argocd"
-  bound_service_account_names      = ["argocd-repo-server"]
+  role_name                        = "argocd-secret-sync"
+  bound_service_account_names      = ["argocd-secret-sync"]
   bound_service_account_namespaces = ["argocd"]
   token_policies                   = [vault_policy.argocd.name]
   token_ttl                        = 3600

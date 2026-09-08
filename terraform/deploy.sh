@@ -145,6 +145,11 @@ if should_run 3; then
   apply "Let's Encrypt ClusterIssuer" \
     -target=kubectl_manifest.letsencrypt_issuer
 
+  apply "External Secrets Operator" \
+    -target=helm_release.external_secrets \
+    -target=kubernetes_cluster_role_v1.external_secrets_controller \
+    -target=kubernetes_cluster_role_binding_v1.external_secrets_controller
+
   success "Phase 3 complete"
 fi
 
@@ -159,7 +164,7 @@ if should_run 4; then
     -target=kubernetes_ingress_v1.openbao \
     -target=cloudflare_dns_record.openbao
 
-  warn "OpenBao deployed. Manual steps required before Phase 6:"
+  warn "OpenBao deployed. Manual steps required before Phase 5:"
   echo ""
   echo "  1. Initialize OpenBao:"
   echo "     kubectl exec -n openbao openbao-0 -- bao operator init"
@@ -187,11 +192,11 @@ if should_run 5; then
   phase 5 "OpenBao configuration"
 
   apply "KV secrets engine" \
-    -target=vault_mount.kv
+    -target=vault_mount.platform_kv
 
   apply "Kubernetes auth backend" \
-    -target=vault_auth_backend.kubernetes \
-    -target=vault_kubernetes_auth_backend_config.kubernetes
+    -target=vault_auth_backend.platform_kubernetes \
+    -target=vault_kubernetes_auth_backend_config.platform
 
   apply "Platform policies and roles" \
     -target=vault_policy.argocd \
@@ -208,6 +213,11 @@ if should_run 6; then
 
   apply "Argo CD" \
     -target=helm_release.argocd \
+    -target=kubernetes_service_account_v1.argocd_secret_sync \
+    -target=kubernetes_role_v1.argocd_secret_sync \
+    -target=kubernetes_role_binding_v1.argocd_secret_sync \
+    -target=kubectl_manifest.argocd_secret_store \
+    -target=kubectl_manifest.argocd_external_secret \
     -target=kubernetes_ingress_v1.argocd \
     -target=cloudflare_dns_record.argocd
 
@@ -224,11 +234,10 @@ if should_run 7; then
 
   warn "Before continuing, ensure:"
   echo ""
-  echo "  1. GitHub App credentials stored in OpenBao UI at:"
+  echo "  1. GitHub App credentials are stored in OpenBao UI at:"
   echo "     secret/platform/argocd-github-app"
   echo ""
-  echo "  2. Argo CD repo server restarted to pick up credentials:"
-  echo "     kubectl rollout restart deployment/argocd-repo-server -n argocd"
+  echo "  2. ESO reports the Argo CD GitHub credentials ExternalSecret as Ready"
   echo "  3. After deployment, retrieve the initial admin password with:"
   echo "     kubectl -n argocd get secret argocd-initial-admin-secret "
   echo "      -o jsonpath="{.data.password}" | base64 -d"

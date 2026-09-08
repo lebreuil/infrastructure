@@ -347,6 +347,11 @@ terraform apply -target=helm_release.cert_manager
 
 # Requires cert-manager
 terraform apply -target=kubectl_manifest.letsencrypt_issuer
+
+# Shared ESO controller and cluster discovery RBAC
+terraform apply -target=helm_release.external_secrets
+terraform apply -target=kubernetes_cluster_role_v1.external_secrets_controller
+terraform apply -target=kubernetes_cluster_role_binding_v1.external_secrets_controller
 ```
 
 NGINX needs the subnet ID from `network.tf` to configure the Octavia
@@ -395,10 +400,11 @@ Add the token to terraform.tfvars
 ### Phase 5 — Apply OpenBao configuration
 
 ```bash
-terraform apply -target=vault_mount.kv
-terraform apply -target=vault_auth_backend.kubernetes
-terraform apply -target=vault_kubernetes_auth_backend_config.kubernetes
-terraform apply  # applies remaining policies and roles
+terraform apply -target=vault_mount.platform_kv
+terraform apply -target=vault_auth_backend.platform_kubernetes
+terraform apply -target=vault_kubernetes_auth_backend_config.platform
+terraform apply -target=vault_policy.argocd
+terraform apply -target=vault_kubernetes_auth_backend_role.argocd
 ```
 
 ---
@@ -408,6 +414,11 @@ terraform apply  # applies remaining policies and roles
 ```bash
 # Requires management nodes
 terraform apply -target=helm_release.argocd
+terraform apply -target=kubernetes_service_account_v1.argocd_secret_sync
+terraform apply -target=kubernetes_role_v1.argocd_secret_sync
+terraform apply -target=kubernetes_role_binding_v1.argocd_secret_sync
+terraform apply -target=kubectl_manifest.argocd_secret_store
+terraform apply -target=kubectl_manifest.argocd_external_secret
 terraform apply -target=kubernetes_ingress_v1.argocd
 terraform apply -target=cloudflare_dns_record.argocd
 
@@ -425,8 +436,8 @@ Create the github App.
 # Step 1 — Use the  script/platform-secrets-init.py — Stores platform secrets in OpenBao
 # Refer to SECRETS_MANAGEMENT.md for details.
 
-# Step 2 — Restart Argo CD repo server to pick up GitHub App credentials
-kubectl rollout restart deployment/argocd-repo-server -n argocd
+# Step 2 — Confirm ESO reports the Argo CD credentials ExternalSecret Ready
+# kubectl -n argocd get externalsecret github-org-creds
 
 # After deployment, retrieve the initial admin password with:
 kubectl -n argocd get secret argocd-initial-admin-secret \

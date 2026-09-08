@@ -59,7 +59,7 @@ ui:
   serviceType: ClusterIP
 
 injector:
-  enabled: true
+  enabled: false
   nodeSelector:
     custom.kaas.infomaniak.cloud/node-role: "management"
 

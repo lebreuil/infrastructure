@@ -42,6 +42,11 @@ Keep changes focused on the relevant Terraform file:
 - OpenBao is Vault API-compatible and is configured through the aliased
   `vault.terraform` provider. Changes that require a live OpenBao connection
   must be made only after OpenBao has been initialized and unsealed.
+- Application secret values, generated credentials, and application tokens are
+  owned by application teams. Do not create them in Terraform or store them in
+  Terraform state.
+- Application teams must never receive the OpenBao root token or Terraform
+  token. Provide only the application-specific OpenBao access and workflow.
 
 ## Deployment workflow
 
@@ -81,10 +86,22 @@ always inspect the plan before applying changes to shared infrastructure.
 - Preserve explicit `depends_on` relationships and the management/worker node
   separation. Management nodes host platform services; worker nodes host
   application workloads.
-- When onboarding an application, keep its Terraform resources together in an
-  `app-*.tf` file and provide the matching OpenBao policies/auth roles, DNS,
-  Cloudflare Access, and GitOps application registration as required by the
-  repository README and onboarding documentation.
+- When onboarding an application, keep its platform resources together in an
+  `app-*.tf` file. Terraform owns the dedicated Kubernetes namespace, ESO
+  service account and namespace-scoped RBAC, OpenBao namespace and policies,
+  Kubernetes auth role, Ingress, DNS, and Cloudflare Access configuration.
+- Application owners own their application repository, Helm values,
+  namespace-local `SecretStore` and `ExternalSecret`, and secret values in
+  OpenBao. Application Services must use `ClusterIP`, and workloads must target
+  worker nodes.
+- The platform repository contains one app-of-apps at
+  `gitops/app-of-apps.yaml`. It watches the `applications` directory in
+  `https://github.com/lebreuil/applications`. Add application Argo CD
+  `Application` manifests there; do not add one-off registrations or another
+  app-of-apps to this repository.
+- Hand application teams the dedicated `APPLICATION_SECRETS.md` guide. The
+  platform-only bootstrap and token hierarchy remain in
+  `SECRETS_MANAGEMENT.md`.
 - Keep Helm values in the corresponding `*-values.yaml` file. Provider version
   constraints in `versions.tf` are intentional; in particular, do not upgrade
   the Helm provider without checking the documented schema-validation issue.

@@ -43,6 +43,10 @@ resource "helm_release" "external_secrets" {
       value = "false"
     },
     {
+      name  = "processPushSecret"
+      value = "false"
+    },
+    {
       name  = "rbac.serviceAccountTokenCreate"
       value = "false"
     }
@@ -51,9 +55,10 @@ resource "helm_release" "external_secrets" {
   depends_on = [infomaniak_kaas_instance_pool.workers]
 }
 
-# The controller can discover ESO resources cluster-wide, but it receives no
-# cluster-wide Secret permissions. Each application namespace adds a
-# namespaced Role/RoleBinding in its app-*.tf file.
+# The controller discovers ESO resources cluster-wide and needs read-only
+# informer access to target Secrets. It receives no cluster-wide Secret write
+# permissions; each application namespace adds a namespaced Role/RoleBinding
+# for Secret writes, status updates, and service-account token creation.
 resource "kubernetes_cluster_role_v1" "external_secrets_controller" {
   metadata {
     name = "external-secrets-controller"
@@ -68,6 +73,18 @@ resource "kubernetes_cluster_role_v1" "external_secrets_controller" {
   rule {
     api_groups = [""]
     resources  = ["namespaces", "serviceaccounts"]
+    verbs      = ["get", "list", "watch"]
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["secrets"]
+    verbs      = ["get", "list", "watch"]
+  }
+
+  rule {
+    api_groups = ["generators.external-secrets.io"]
+    resources  = ["generatorstates"]
     verbs      = ["get", "list", "watch"]
   }
 }

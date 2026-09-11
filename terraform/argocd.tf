@@ -100,7 +100,7 @@ resource "kubectl_manifest" "argocd_secret_store" {
     spec = {
       provider = {
         vault = {
-          server    = "https://openbao.${var.domain}"
+          server    = "http://openbao.openbao.svc.cluster.local:8200"
           path      = "secret"
           version   = "v2"
           namespace = "platform"

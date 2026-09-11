@@ -517,12 +517,20 @@ into a Kubernetes Secret in the same namespace. Each application uses a
 dedicated OpenBao namespace, Kubernetes auth role, and namespace-local
 `SecretStore`. A single ESO controller is shared by the cluster: it has
 cluster-wide discovery permissions for ESO resources and read-only informer
-access to Secrets, but no cluster-wide Secret write permissions. Terraform
-adds a namespaced Role/RoleBinding for each registered application, limiting
-Secret writes, status updates, and service account token creation to that
-namespace. Adding an application therefore requires registering its
-namespace-specific RBAC and OpenBao auth resources; the ESO Helm release
-itself is not duplicated.
+access to Secrets, but no cluster-wide Secret write permissions. The unused
+PushSecret reconciler is disabled. Terraform adds a namespaced Role/RoleBinding
+for each registered application, allowing Secret writes, ExternalSecret status
+updates, and service account token creation only in that namespace. The
+namespace Role must grant access to the `ExternalSecret` resource itself as
+well as its status and finalizer subresources.
+
+ESO must connect to OpenBao through the cluster-local service
+`http://openbao.openbao.svc.cluster.local:8200`. The public
+`openbao.<domain>` hostname is protected by Cloudflare Access and is intended
+for human-facing access, not in-cluster Kubernetes authentication.
+
+Adding an application therefore requires registering its namespace-specific
+RBAC and OpenBao auth resources; the ESO Helm release itself is not duplicated.
 
 ### Per-application DNS records
 Each application gets its own Cloudflare DNS A record created as part

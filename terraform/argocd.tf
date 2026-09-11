@@ -57,7 +57,7 @@ resource "kubernetes_role_v1" "argocd_secret_sync" {
 
   rule {
     api_groups = ["external-secrets.io"]
-    resources  = ["secretstores/status", "secretstores/finalizers", "externalsecrets/status", "externalsecrets/finalizers"]
+    resources  = ["secretstores/status", "secretstores/finalizers", "externalsecrets", "externalsecrets/status", "externalsecrets/finalizers"]
     verbs      = ["get", "update", "patch"]
   }
 

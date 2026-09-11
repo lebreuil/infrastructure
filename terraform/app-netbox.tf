@@ -215,9 +215,9 @@ resource "kubernetes_ingress_v1" "netbox" {
           path_type = "Prefix"
           backend {
             service {
-              name = "netbox-ui" # UI service
+              name = "netbox"
               port {
-                number = 8200 # CHANGED from 80 to 8200
+                number = 80
               }
             }
           }

@@ -516,12 +516,13 @@ External Secrets Operator synchronizes each application's OpenBao KV secret
 into a Kubernetes Secret in the same namespace. Each application uses a
 dedicated OpenBao namespace, Kubernetes auth role, and namespace-local
 `SecretStore`. A single ESO controller is shared by the cluster: it has
-cluster-wide discovery permissions for ESO resources but no cluster-wide
-Secret permissions. Terraform adds a namespaced Role/RoleBinding for each
-registered application, limiting Secret access, status updates, and service
-account token creation to that namespace. Adding an application therefore
-requires registering its namespace-specific RBAC and OpenBao auth resources;
-the ESO Helm release itself is not duplicated.
+cluster-wide discovery permissions for ESO resources and read-only informer
+access to Secrets, but no cluster-wide Secret write permissions. Terraform
+adds a namespaced Role/RoleBinding for each registered application, limiting
+Secret writes, status updates, and service account token creation to that
+namespace. Adding an application therefore requires registering its
+namespace-specific RBAC and OpenBao auth resources; the ESO Helm release
+itself is not duplicated.
 
 ### Per-application DNS records
 Each application gets its own Cloudflare DNS A record created as part

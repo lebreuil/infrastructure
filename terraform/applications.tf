@@ -7,10 +7,12 @@ variable "applications" {
     service_name      = string
     service_port      = number
     openbao_namespace = string
+    github_team       = string
   }))
   default = {
     netbox = {
       display_name      = "NetBox"
+      github_team       = "netbox"
       namespace         = "netbox"
       hostname          = "netbox.famillelebreuil.net"
       service_name      = "netbox"
@@ -25,13 +27,15 @@ module "application" {
 
   source = "./modules/application"
 
-  name              = each.key
-  display_name      = each.value.display_name
-  namespace         = each.value.namespace
-  hostname          = each.value.hostname
-  service_name      = each.value.service_name
-  service_port      = each.value.service_port
-  openbao_namespace = each.value.openbao_namespace
+  name                = each.key
+  display_name        = each.value.display_name
+  namespace           = each.value.namespace
+  hostname            = each.value.hostname
+  service_name        = each.value.service_name
+  service_port        = each.value.service_port
+  openbao_namespace   = each.value.openbao_namespace
+  github_team         = each.value.github_team
+  github_organization = var.github_organization
 
   cloudflare_account_id                          = var.cloudflare_account_id
   cloudflare_zone_id                             = var.cloudflare_zone_id

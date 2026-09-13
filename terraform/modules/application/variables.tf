@@ -33,6 +33,16 @@ variable "openbao_namespace" {
   description = "OpenBao namespace used by the application's SecretStore."
 }
 
+variable "github_team" {
+  type        = string
+  description = "Slugified GitHub team granted access to this application's write policy."
+}
+
+variable "github_organization" {
+  type        = string
+  description = "GitHub organization containing the application team."
+}
+
 variable "cloudflare_account_id" {
   type = string
 }

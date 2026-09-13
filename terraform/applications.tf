@@ -8,12 +8,12 @@ variable "applications" {
     service_name      = string
     service_port      = number
     openbao_namespace = string
-    github_team       = string
+    oidc_group        = string
   }))
   default = {
     netbox = {
       display_name      = "NetBox"
-      github_team       = "netbox"
+      oidc_group        = "netbox"
       access_name       = "netbox"
       namespace         = "netbox"
       hostname          = "netbox.famillelebreuil.net"
@@ -24,7 +24,7 @@ variable "applications" {
     podinfo = {
       display_name      = "Podinfo"
       access_name       = "Podinfo"
-      github_team       = "podinfo"
+      oidc_group        = "podinfo"
       namespace         = "podinfo"
       hostname          = "podinfo.famillelebreuil.net"
       service_name      = "podinfo"
@@ -39,16 +39,19 @@ module "application" {
 
   source = "./modules/application"
 
-  name                = each.key
-  display_name        = each.value.display_name
-  namespace           = each.value.namespace
-  hostname            = each.value.hostname
-  service_name        = each.value.service_name
-  service_port        = each.value.service_port
-  openbao_namespace   = each.value.openbao_namespace
-  github_team         = each.value.github_team
-  github_organization = var.github_organization
-  access_name         = each.value.access_name
+  name                       = each.key
+  display_name               = each.value.display_name
+  namespace                  = each.value.namespace
+  hostname                   = each.value.hostname
+  service_name               = each.value.service_name
+  service_port               = each.value.service_port
+  openbao_namespace          = each.value.openbao_namespace
+  oidc_group                 = each.value.oidc_group
+  oidc_discovery_url         = var.oidc_discovery_url
+  oidc_client_id             = var.oidc_client_id
+  oidc_client_secret         = var.oidc_client_secret
+  oidc_allowed_redirect_uris = var.oidc_allowed_redirect_uris
+  access_name                = each.value.access_name
 
   cloudflare_account_id                          = var.cloudflare_account_id
   cloudflare_zone_id                             = var.cloudflare_zone_id

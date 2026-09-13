@@ -136,22 +136,31 @@ resource "vault_policy" "write" {
   EOT
 }
 
-resource "vault_github_auth_backend" "github" {
-  provider      = vault.terraform
-  namespace     = vault_namespace.application.path
-  path          = "github"
-  organization  = var.github_organization
-  description   = "GitHub authentication for ${var.display_name} application team"
-  token_ttl     = 3600
-  token_max_ttl = 14400
+resource "vault_jwt_auth_backend" "oidc" {
+  provider           = vault.terraform
+  namespace          = vault_namespace.application.path
+  path               = "oidc"
+  type               = "oidc"
+  oidc_discovery_url = var.oidc_discovery_url
+  oidc_client_id     = var.oidc_client_id
+  oidc_client_secret = var.oidc_client_secret
+  description        = "OIDC authentication for ${var.display_name} application team"
 }
 
-resource "vault_github_team" "application" {
-  provider  = vault.terraform
-  namespace = vault_namespace.application.path
-  backend   = vault_github_auth_backend.github.path
-  team      = var.github_team
-  policies  = [vault_policy.write.name]
+resource "vault_jwt_auth_backend_role" "oidc" {
+  provider              = vault.terraform
+  namespace             = vault_namespace.application.path
+  backend               = vault_jwt_auth_backend.oidc.path
+  role_name             = var.name
+  role_type             = "oidc"
+  user_claim            = "sub"
+  groups_claim          = "groups"
+  oidc_scopes           = ["openid", "profile", "email", "groups"]
+  allowed_redirect_uris = var.oidc_allowed_redirect_uris
+  bound_claims = {
+    groups = var.oidc_group
+  }
+  token_policies = [vault_policy.write.name]
 }
 
 resource "vault_kubernetes_auth_backend_role" "secret_sync" {

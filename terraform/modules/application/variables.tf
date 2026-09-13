@@ -38,14 +38,30 @@ variable "openbao_namespace" {
   description = "OpenBao namespace used by the application's SecretStore."
 }
 
-variable "github_team" {
+variable "oidc_group" {
   type        = string
-  description = "Slugified GitHub team granted access to this application's write policy."
+  description = "OIDC group claim value granted access to this application's write policy."
 }
 
-variable "github_organization" {
+variable "oidc_discovery_url" {
   type        = string
-  description = "GitHub organization containing the application team."
+  description = "OIDC discovery URL."
+}
+
+variable "oidc_client_id" {
+  type        = string
+  description = "OIDC client ID."
+}
+
+variable "oidc_client_secret" {
+  type        = string
+  sensitive   = true
+  description = "OIDC client secret."
+}
+
+variable "oidc_allowed_redirect_uris" {
+  type        = list(string)
+  description = "OIDC callback URIs registered for OpenBao."
 }
 
 variable "cloudflare_account_id" {

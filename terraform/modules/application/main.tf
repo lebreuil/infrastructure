@@ -204,7 +204,7 @@ data "cloudflare_zone" "zone" {
 resource "cloudflare_zero_trust_access_application" "application" {
   account_id       = var.cloudflare_account_id
   zone_id          = var.cloudflare_zone_id
-  name             = var.name
+  name             = var.access_name
   type             = "self_hosted"
   session_duration = "8h"
 

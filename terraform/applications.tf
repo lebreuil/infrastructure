@@ -24,6 +24,7 @@ variable "applications" {
     podinfo = {
       display_name      = "Podinfo"
       access_name       = "Podinfo"
+      github_team       = "podinfo"
       namespace         = "podinfo"
       hostname          = "podinfo.famillelebreuil.net"
       service_name      = "podinfo"
@@ -47,7 +48,7 @@ module "application" {
   openbao_namespace   = each.value.openbao_namespace
   github_team         = each.value.github_team
   github_organization = var.github_organization
-  access_name       = each.value.access_name
+  access_name         = each.value.access_name
 
   cloudflare_account_id                          = var.cloudflare_account_id
   cloudflare_zone_id                             = var.cloudflare_zone_id

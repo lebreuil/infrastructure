@@ -149,12 +149,11 @@ created in `openbao-config.tf` as part of each application onboarding.
 | `openbao` | `helm_release` | Deploys OpenBao |
 | `openbao` | `cloudflare_record` | `openbao.your-domain.com` → NGINX IP |
 
-### `openbao-config.tf` — OpenBao configuration + per-application onboarding
+### `openbao-config.tf` — Platform OpenBao configuration
 
-This file contains both platform-level OpenBao configuration and
-per-application onboarding resources. Adding a new application requires
-adding three resources to this file — a policy, a Kubernetes auth role,
-and a Cloudflare DNS record.
+This file contains platform-level OpenBao configuration. Per-application
+resources are created by the reusable `modules/application` module from the
+`applications` map.
 
 **Platform resources (created once):**
 
@@ -166,13 +165,9 @@ and a Cloudflare DNS record.
 | `argocd` | `vault_policy` | Policy for Argo CD repo server |
 | `argocd` | `vault_kubernetes_auth_backend_role` | Role for Argo CD repo server |
 
-**Per-application resources (one set per application):**
-
-| Resource | Type | Purpose |
-|---|---|---|
-| `netbox` | `vault_policy` | Read-only policy for NetBox secrets |
-| `netbox` | `vault_kubernetes_auth_backend_role` | Role for NetBox ESO synchronization |
-| `netbox` | `cloudflare_record` | `netbox.your-domain.com` → NGINX IP |
+**Per-application resources:** `module.application["<name>"]` creates the
+namespace, ESO RBAC, OpenBao namespace, KV mount, auth backend and policies,
+Kubernetes auth role, Ingress, DNS record, and Cloudflare Access application.
 
 ### `gitops/applications/netbox-application.yaml` — NetBox Argo CD Application
 
@@ -475,11 +470,23 @@ Terraform resolves all dependencies automatically via `depends_on`.
 
 ### Onboarding a new application
 
-1. Add the application namespace, dedicated ESO sync service account, and
-   OpenBao namespace/policies/auth role. The application repository owns the
-   namespace-local `SecretStore` and `ExternalSecret`. Also add:
-   - `cloudflare_record.<app>` — DNS A record for `<app>.your-domain.com`
-   - `cloudflare_zero_trust_access_application` - Cloudflare access for the app.
+1. Add an entry to `terraform/applications.auto.tfvars` (or a suitable
+   variable file):
+   ```hcl
+   applications = {
+     netbox = {
+       namespace         = "netbox"
+       hostname          = "netbox.your-domain.com"
+       service_name      = "netbox"
+       service_port      = 80
+       openbao_namespace = "netbox"
+     }
+   }
+   ```
+   The reusable `modules/application` module creates the namespace, ESO RBAC,
+   OpenBao auth and policies, Ingress, DNS record, and Cloudflare Access
+   application. Do not add secret names or secret values here: the application
+   repository owns its namespace-local `SecretStore` and `ExternalSecret`.
 
    Then apply:
    ```bash
@@ -529,17 +536,17 @@ ESO must connect to OpenBao through the cluster-local service
 `openbao.<domain>` hostname is protected by Cloudflare Access and is intended
 for human-facing access, not in-cluster Kubernetes authentication.
 
-Adding an application therefore requires registering its namespace-specific
-RBAC and OpenBao auth resources; the ESO Helm release itself is not duplicated.
+Adding an application therefore requires one map entry; the ESO Helm release
+itself is not duplicated. The module grants application write tokens access to
+`sys/capabilities-self`, which is required by the OpenBao UI to inspect token
+permissions.
 
 ### Per-application DNS records
-Each application gets its own Cloudflare DNS A record created as part
-of the platform onboarding process in `openbao-config.tf`. This keeps
-all per-application platform resources (policy, role, DNS) in one place,
-making onboarding and offboarding explicit and auditable. Removing an
-application means removing its three resources from `openbao-config.tf`
-and running `terraform apply` — the DNS record, OpenBao access and
-Argo CD application are all cleaned up in one operation.
+Each application gets its own Cloudflare DNS A record created by the
+`modules/application` module. Removing an application means removing its map
+entry and running `terraform apply`; the platform resources are then cleaned
+up together. The Argo CD Application remains managed separately in the
+applications repository.
 
 ### Two node pools with dedicated roles
 Management nodes run platform infrastructure (NGINX, Argo CD,

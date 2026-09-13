@@ -5,9 +5,10 @@ access configuration to complete before handing an application to its owners.
 Application owners should use [Application Onboarding](APPLICATION_ONBOARDING.md)
 for the resources and constraints that apply to them.
 
-Application-specific platform resources belong in a dedicated `terraform/app-*.tf`
-file. Application manifests and Helm values belong in the application
-repository. Argo CD application registrations belong in the
+Application-specific platform resources are declared as entries in the
+`terraform/applications` map and created by the reusable
+`terraform/modules/application` module. Application manifests and Helm values
+belong in the application repository. Argo CD application registrations belong in the
 `applications` directory of the
 [`lebreuil/applications`](https://github.com/lebreuil/applications) repository.
 
@@ -18,6 +19,8 @@ repository. Argo CD application registrations belong in the
 Before changing Terraform, obtain the following from the application owner:
 
 - application name and desired Kubernetes namespace name
+- human-readable application display name
+- public hostname, if it differs from the application name
 - GitHub repository URL and deployment path
 - Kubernetes Service name and port used by the application
 - application owner and operational contact
@@ -31,11 +34,28 @@ reason not to.
 
 ## Platform resources to add
 
-Add the application resources to its `terraform/app-*.tf` file.
+Add one entry to the `applications` variable. Do not copy an application
+resource file:
+
+```hcl
+applications = {
+  example = {
+    display_name      = "Example"
+    namespace         = "example"
+    hostname          = "example.your-domain.com"
+    service_name      = "example"
+    service_port      = 80
+    openbao_namespace = "example"
+  }
+}
+```
+
+The module creates the platform resources below. Existing resources are
+preserved through Terraform `moved` blocks when the module is introduced.
 
 ### Kubernetes namespace and secret-sync identity
 
-Create:
+The module creates:
 
 - a dedicated Kubernetes namespace
 - a dedicated service account for External Secrets Operator authentication
@@ -49,7 +69,7 @@ identities.
 
 ### OpenBao namespace and policies
 
-Create an isolated OpenBao namespace for the application containing:
+The module creates an isolated OpenBao namespace containing:
 
 - a KV v2 mount named `secret`
 - a Kubernetes auth backend configured for the cluster
@@ -57,6 +77,8 @@ Create an isolated OpenBao namespace for the application containing:
 - a write policy for the application owner, limited to that OpenBao namespace
 - a Kubernetes auth role bound only to the namespace-local ESO service account
   and the read policy
+- `sys/capabilities-self` access in the write policy so the OpenBao UI can
+  inspect the token's effective permissions
 
 Preserve the least-privilege policy shape used by the existing application
 resources. Do not place generated passwords, application tokens, or secret
@@ -64,8 +86,8 @@ values in Terraform configuration or state.
 
 ### Ingress and DNS
 
-Create the application's Ingress in Terraform. The platform assigns the DNS
-name from the application name and the shared base domain.
+The module creates the application's Ingress. It assigns the DNS name from the
+application entry and routes to the declared Service name and port.
 
 The Ingress should:
 
@@ -74,9 +96,9 @@ The Ingress should:
 - use the platform Let's Encrypt issuer
 - enable HTTPS
 
-Create the matching Cloudflare DNS record from the Ingress load-balancer
-address. Do not ask application owners to create DNS or Ingress resources in
-their application repository.
+The module creates the matching Cloudflare DNS record from the Ingress
+load-balancer address. Do not ask application owners to create DNS or Ingress
+resources in their application repository.
 
 ### Cloudflare Access
 
@@ -114,7 +136,8 @@ From `terraform/`:
 1. Run `terraform fmt` on changed Terraform files.
 2. Run `terraform validate`.
 3. Review `terraform plan` for namespace, RBAC, OpenBao policy, DNS, Access,
-   and ingress changes.
+   and Ingress changes. For an existing application migration, the plan should
+   show resource moves and no destroys.
 4. Confirm the plan contains no application secret values or generated tokens.
 5. Apply the approved plan.
 
@@ -176,7 +199,7 @@ Confirm that the owner understands:
 ## Onboarding completion checklist
 
 - [ ] Application inputs and owner contact recorded
-- [ ] Dedicated `terraform/app-*.tf` resources added
+- [ ] Application entry added to the `applications` variable
 - [ ] Namespace and ESO RBAC configured
 - [ ] OpenBao namespace, KV mount, policies, and auth role configured
 - [ ] Ingress and assigned DNS record configured

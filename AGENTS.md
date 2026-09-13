@@ -19,8 +19,8 @@ Keep changes focused on the relevant Terraform file:
 - `argocd.tf` and `argocd-values.yaml` — Argo CD and app-of-apps bootstrap.
 - `openbao.tf`, `openbao-config.tf`, and `openbao-values.yaml` — OpenBao
   deployment and platform policies/authentication.
-- `app-*.tf` — application-specific Kubernetes, OpenBao, DNS, and Cloudflare
-  Access resources.
+- `applications.tf` and `modules/application/` — reusable application
+  onboarding resources and the typed application definitions.
 - `providers.tf`, `versions.tf`, and `variables.tf` — provider wiring,
   constraints, and inputs.
 - `deploy.sh` — the ordered first-deployment helper; keep its targets aligned
@@ -86,14 +86,18 @@ always inspect the plan before applying changes to shared infrastructure.
 - Preserve explicit `depends_on` relationships and the management/worker node
   separation. Management nodes host platform services; worker nodes host
   application workloads.
-- When onboarding an application, keep its platform resources together in an
-  `app-*.tf` file. Terraform owns the dedicated Kubernetes namespace, ESO
-  service account and namespace-scoped RBAC, OpenBao namespace and policies,
-  Kubernetes auth role, Ingress, DNS, and Cloudflare Access configuration.
+- When onboarding an application, add one entry to the `applications` variable.
+  The reusable module owns the dedicated Kubernetes namespace, ESO service
+  account and namespace-scoped RBAC, OpenBao namespace and policies, Kubernetes
+  auth role, Ingress, DNS, and Cloudflare Access configuration. Use Terraform
+  `moved` blocks when migrating existing application resources into the module.
 - Application owners own their application repository, Helm values,
   namespace-local `SecretStore` and `ExternalSecret`, and secret values in
   OpenBao. Application Services must use `ClusterIP`, and workloads must target
   worker nodes.
+- Keep secret names and mappings out of the application definition. The
+  application repository owns the namespace-local `SecretStore` and
+  `ExternalSecret` schema.
 - The platform repository contains one app-of-apps at
   `gitops/app-of-apps.yaml`. It watches the `applications` directory in
   `https://github.com/lebreuil/applications`. Add application Argo CD

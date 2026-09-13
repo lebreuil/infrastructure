@@ -78,8 +78,29 @@ variable "letsencrypt_email" {
 ## openbao related variables
 
 variable "github_organization" {
-  description = "GitHub organization for the OpenBao instance"
+  description = "GitHub organization used by the Argo CD repository credential"
   type        = string
+}
+
+variable "oidc_discovery_url" {
+  description = "OIDC discovery URL used by application-team authentication"
+  type        = string
+}
+
+variable "oidc_client_id" {
+  description = "OIDC client ID registered for OpenBao"
+  type        = string
+}
+
+variable "oidc_client_secret" {
+  description = "OIDC client secret registered for OpenBao"
+  type        = string
+  sensitive   = true
+}
+
+variable "oidc_allowed_redirect_uris" {
+  description = "Redirect URIs registered for the shared OpenBao OIDC client"
+  type        = list(string)
 }
 
 variable "openbao_terraform_token" {
@@ -87,6 +108,4 @@ variable "openbao_terraform_token" {
   type        = string
   sensitive   = true
 }
-
-
 

@@ -78,7 +78,7 @@ The Terraform token can create and manage:
 * child namespaces
 * secrets engines
 * authentication backends
-* GitHub authentication
+* OIDC authentication
 * Kubernetes authentication
 * authentication roles/configuration
 * ACL policies

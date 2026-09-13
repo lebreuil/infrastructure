@@ -20,7 +20,7 @@ Before changing Terraform, obtain the following from the application owner:
 
 - application name and desired Kubernetes namespace name
 - human-readable application display name
-- slugified GitHub team name for application owners
+- OIDC group claim value for application owners
 - public hostname, if it differs from the application name
 - GitHub repository URL and deployment path
 - Kubernetes Service name and port used by the application
@@ -109,15 +109,16 @@ Create a Cloudflare Zero Trust Access application for the assigned hostname and
 attach the approved identity provider and access policy. Confirm the required
 Cloudflare Access settings with the platform owner before applying.
 
-### GitHub authentication
+### OIDC authentication
 
-The application module creates a GitHub auth backend inside the application's
-OpenBao namespace. Set `github_team` to the slugified GitHub team name in the
-application definition. That team is mapped only to the application's write
-policy; it cannot authenticate into another application's namespace.
+The application module creates a provider-neutral OIDC auth backend inside the
+application's OpenBao namespace. Set `oidc_group` to the group claim value in
+the application definition. That group is mapped only to the application's
+write policy; it cannot authenticate into another application's namespace.
 
-The GitHub organization is taken from the shared `github_organization`
-Terraform variable. Ensure the team exists in that organization before applying.
+The discovery URL, client ID, client secret, and registered redirect URIs are
+shared Terraform variables. The configured identity provider must emit the
+`groups` claim and include the configured application group.
 
 ### Argo CD registration
 

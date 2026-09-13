@@ -42,7 +42,7 @@ resource "kubernetes_role_v1" "netbox_secret_sync_token" {
 
   rule {
     api_groups = ["external-secrets.io"]
-    resources  = ["secretstores/status", "secretstores/finalizers", "externalsecrets/status", "externalsecrets/finalizers"]
+    resources  = ["secretstores/status", "secretstores/finalizers", "externalsecrets", "externalsecrets/status", "externalsecrets/finalizers"]
     verbs      = ["get", "update", "patch"]
   }
 
@@ -160,6 +160,9 @@ resource "vault_policy" "netbox_write" {
     path "auth/token/renew-self" {
       capabilities = ["update"]
     }
+    path "sys/capabilities-self" {
+      capabilities = ["update"]
+    }
   EOT
 
   depends_on = [vault_namespace.netbox]
@@ -215,9 +218,9 @@ resource "kubernetes_ingress_v1" "netbox" {
           path_type = "Prefix"
           backend {
             service {
-              name = "netbox-ui" # UI service
+              name = "netbox"
               port {
-                number = 8200 # CHANGED from 80 to 8200
+                number = 80
               }
             }
           }

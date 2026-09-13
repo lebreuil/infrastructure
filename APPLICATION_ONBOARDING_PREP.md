@@ -20,6 +20,7 @@ Before changing Terraform, obtain the following from the application owner:
 
 - application name and desired Kubernetes namespace name
 - human-readable application display name
+- slugified GitHub team name for application owners
 - public hostname, if it differs from the application name
 - GitHub repository URL and deployment path
 - Kubernetes Service name and port used by the application
@@ -75,6 +76,8 @@ The module creates an isolated OpenBao namespace containing:
 - a Kubernetes auth backend configured for the cluster
 - a read policy limited to the application's `secret/config` value
 - a write policy for the application owner, limited to that OpenBao namespace
+- a namespace-local GitHub auth backend
+- a GitHub team mapping that grants the application write policy
 - a Kubernetes auth role bound only to the namespace-local ESO service account
   and the read policy
 - `sys/capabilities-self` access in the write policy so the OpenBao UI can
@@ -105,6 +108,16 @@ resources in their application repository.
 Create a Cloudflare Zero Trust Access application for the assigned hostname and
 attach the approved identity provider and access policy. Confirm the required
 Cloudflare Access settings with the platform owner before applying.
+
+### GitHub authentication
+
+The application module creates a GitHub auth backend inside the application's
+OpenBao namespace. Set `github_team` to the slugified GitHub team name in the
+application definition. That team is mapped only to the application's write
+policy; it cannot authenticate into another application's namespace.
+
+The GitHub organization is taken from the shared `github_organization`
+Terraform variable. Ensure the team exists in that organization before applying.
 
 ### Argo CD registration
 
@@ -202,6 +215,7 @@ Confirm that the owner understands:
 - [ ] Application entry added to the `applications` variable
 - [ ] Namespace and ESO RBAC configured
 - [ ] OpenBao namespace, KV mount, policies, and auth role configured
+- [ ] GitHub auth backend and application team mapping configured
 - [ ] Ingress and assigned DNS record configured
 - [ ] Cloudflare Access configured where required
 - [ ] Argo CD Application registered in `gitops/`

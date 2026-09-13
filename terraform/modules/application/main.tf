@@ -136,6 +136,24 @@ resource "vault_policy" "write" {
   EOT
 }
 
+resource "vault_github_auth_backend" "github" {
+  provider      = vault.terraform
+  namespace     = vault_namespace.application.path
+  path          = "github"
+  organization  = var.github_organization
+  description   = "GitHub authentication for ${var.display_name} application team"
+  token_ttl     = 3600
+  token_max_ttl = 14400
+}
+
+resource "vault_github_team" "application" {
+  provider  = vault.terraform
+  namespace = vault_namespace.application.path
+  backend   = vault_github_auth_backend.github.path
+  team      = var.github_team
+  policies  = [vault_policy.write.name]
+}
+
 resource "vault_kubernetes_auth_backend_role" "secret_sync" {
   provider                         = vault.terraform
   namespace                        = vault_namespace.application.path

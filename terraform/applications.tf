@@ -2,6 +2,7 @@ variable "applications" {
   description = "Applications requiring platform namespace, secret sync, OpenBao, and ingress resources."
   type = map(object({
     display_name      = string
+    access_name       = string
     namespace         = string
     hostname          = string
     service_name      = string
@@ -13,11 +14,21 @@ variable "applications" {
     netbox = {
       display_name      = "NetBox"
       github_team       = "netbox"
+      access_name       = "netbox"
       namespace         = "netbox"
       hostname          = "netbox.famillelebreuil.net"
       service_name      = "netbox"
       service_port      = 80
       openbao_namespace = "netbox"
+    }
+    podinfo = {
+      display_name      = "Podinfo"
+      access_name       = "Podinfo"
+      namespace         = "podinfo"
+      hostname          = "podinfo.famillelebreuil.net"
+      service_name      = "podinfo"
+      service_port      = 9898
+      openbao_namespace = "podinfo"
     }
   }
 }
@@ -36,6 +47,7 @@ module "application" {
   openbao_namespace   = each.value.openbao_namespace
   github_team         = each.value.github_team
   github_organization = var.github_organization
+  access_name       = each.value.access_name
 
   cloudflare_account_id                          = var.cloudflare_account_id
   cloudflare_zone_id                             = var.cloudflare_zone_id

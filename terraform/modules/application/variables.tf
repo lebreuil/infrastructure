@@ -8,6 +8,11 @@ variable "display_name" {
   description = "Human-readable application name used in resource descriptions."
 }
 
+variable "access_name" {
+  type        = string
+  description = "Cloudflare Access application name."
+}
+
 variable "namespace" {
   type        = string
   description = "Kubernetes and OpenBao namespace for the application."

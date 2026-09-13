@@ -94,6 +94,9 @@ resource "vault_policy" "platform_write" {
     path "auth/token/renew-self" {
       capabilities = ["update"]
     }
+    path "sys/capabilities-self" {
+      capabilities = ["update"]
+    }
   EOT
 
   depends_on = [vault_namespace.platform]

@@ -85,11 +85,13 @@ variable "github_organization" {
 variable "oidc_discovery_url" {
   description = "OIDC discovery URL used by application-team authentication"
   type        = string
+  default     = ""
 }
 
 variable "oidc_client_id" {
-  description = "OIDC client ID registered for OpenBao"
+  description = "Authentik OAuth/OIDC client ID registered for OpenBao"
   type        = string
+  default     = ""
 }
 
 variable "oidc_client_secret" {

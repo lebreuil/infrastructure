@@ -232,10 +232,11 @@ Kubernetes auth role, Ingress, DNS record, and Cloudflare Access application.
 Application OIDC roles use OpenBao's standard UI callback:
 `https://openbao.<domain>/ui/vault/auth/oidc/oidc/callback`. It is derived from
 the `domain` variable and does not need to be supplied separately. The
-`oidc_client_secret` value is the client secret generated for the OpenBao
-OAuth/OIDC provider in Authentik. It is optional during the initial platform
-bootstrap; once Authentik's provider is configured, provide it through a
-sensitive Terraform variable or environment variable and apply again.
+`oidc_discovery_url`, `oidc_client_id`, and `oidc_client_secret` values are
+generated or registered when the OpenBao OAuth/OIDC provider is configured in
+Authentik. They are optional during the initial platform bootstrap; once
+Authentik's provider is configured, provide them through Terraform variables
+or environment variables and apply again.
 
 ---
 

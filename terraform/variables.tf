@@ -98,14 +98,8 @@ variable "oidc_client_secret" {
   sensitive   = true
 }
 
-variable "oidc_allowed_redirect_uris" {
-  description = "Redirect URIs registered for the shared OpenBao OIDC client"
-  type        = list(string)
-}
-
 variable "openbao_terraform_token" {
   description = "Terraform token for the OpenBao instance"
   type        = string
   sensitive   = true
 }
-

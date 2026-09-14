@@ -229,6 +229,10 @@ Kubernetes auth role, Ingress, DNS record, and Cloudflare Access application.
 |---|---|---|
 | `openbao_root_token` | OpenBao root token (generated at init) | Yes |
 
+Application OIDC roles use OpenBao's standard UI callback:
+`https://openbao.<domain>/ui/vault/auth/oidc/oidc/callback`. It is derived from
+the `domain` variable and does not need to be supplied separately.
+
 ---
 
 ## Usage

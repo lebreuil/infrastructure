@@ -9,6 +9,7 @@ variable "applications" {
     service_port      = number
     openbao_namespace = string
     oidc_group        = string
+    oidc_enabled      = bool
   }))
   default = {
     netbox = {
@@ -20,6 +21,7 @@ variable "applications" {
       service_name      = "netbox"
       service_port      = 80
       openbao_namespace = "netbox"
+      oidc_enabled      = true
     }
     podinfo = {
       display_name      = "Podinfo"
@@ -30,6 +32,18 @@ variable "applications" {
       service_name      = "podinfo"
       service_port      = 9898
       openbao_namespace = "podinfo"
+      oidc_enabled      = true
+    }
+    authentik = {
+      display_name      = "Authentik"
+      access_name       = "Authentik"
+      namespace         = "authentik"
+      hostname          = "auth.famillelebreuil.net"
+      service_name      = "authentik-server"
+      service_port      = 80
+      openbao_namespace = "authentik"
+      oidc_group        = "authentik"
+      oidc_enabled      = false
     }
   }
 }
@@ -47,6 +61,7 @@ module "application" {
   service_port               = each.value.service_port
   openbao_namespace          = each.value.openbao_namespace
   oidc_group                 = each.value.oidc_group
+  oidc_enabled               = each.value.oidc_enabled
   oidc_discovery_url         = var.oidc_discovery_url
   oidc_client_id             = var.oidc_client_id
   oidc_client_secret         = var.oidc_client_secret

@@ -15,6 +15,7 @@ The platform stack provisions and configures the following infrastructure:
 - **cert-manager** for automated TLS certificate management via Let's Encrypt
 - **Argo CD** as the GitOps continuous delivery platform
 - **OpenBao** as the secret management platform
+- **Authentik** as a standard application and OIDC identity broker for application teams
 - **Cloudflare** for DNS, proxying, and DDoS protection
 
 Applications are deployed by their respective teams via Argo CD from
@@ -38,6 +39,7 @@ NGINX Ingress Controller (management nodes)
     ↓ TLS termination (per-service certs via cert-manager annotations)
     ├── argocd.your-domain.com  → Argo CD
     ├── openbao.your-domain.com → OpenBao
+    ├── auth.your-domain.com    → Authentik (application-managed)
     └── *.your-domain.com       → Application workloads (worker nodes)
 
 Secret management:
@@ -47,6 +49,9 @@ Secret management:
 GitHub access:
     GitHub App (organisation-wide) → Argo CD credential template
     → all repositories under the organisation accessible automatically
+
+Application authentication:
+    GitHub → Authentik → OpenBao OIDC → application write policy
 ```
 
 ---
@@ -287,17 +292,17 @@ chmod +x deploy.sh
 └────────────────────────────────┬─────────────────────────────-──┘
                                  │
 ┌──────────────────────────────--▼────────────────────────────────┐
-│  Phase 6 — Argo CD.                                             │
+│  Phase 6 — Argo CD                                              │
 │  kubectl_manifest.argocd                                        │
 └─────────────────────────────────┬───────────────────────────────┘
 ┌─────────────────────────────────▼───────────────────────────────┐
-│  Phase 7 — Secrets                                              │
-│  OpenBao UI (manual secrets)                                    │
+│  Phase 7 — Argo CD app-of-apps bootstrap                        │
+│  Applications are synced from the applications repository         │
 └─────────────────────────────────────────────────────────────────┘
 
                                   │
 ┌─────────────────────────────────▼───────────────────────────────┐
-│  Phase 8 — Argo CD app-of-apps bootstrap                        │
+│  Phase 8 — Final apply                                           │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -404,7 +409,7 @@ terraform apply -target=vault_kubernetes_auth_backend_role.argocd
 
 ---
 
-### Phase 6 —  Argo CD
+### Phase 6 — Argo CD
 
 ```bash
 # Requires management nodes
@@ -433,6 +438,14 @@ Create the github App.
 
 # Step 2 — Confirm ESO reports the Argo CD credentials ExternalSecret Ready
 # kubectl -n argocd get externalsecret github-org-creds
+
+# Authentik is a standard application. From the Authentik repository,
+# initialise its application secret before Argo CD syncs its Application:
+cd /Users/marc/github/lebreuil/authentik
+cp .env.example .env
+# Edit .env, then:
+set -a && source .env && set +a
+python3 scripts/app-secrets-init.py
 
 # After deployment, retrieve the initial admin password with:
 kubectl -n argocd get secret argocd-initial-admin-secret \

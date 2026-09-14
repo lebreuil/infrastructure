@@ -43,6 +43,12 @@ variable "oidc_group" {
   description = "OIDC group claim value granted access to this application's write policy."
 }
 
+variable "oidc_enabled" {
+  type        = bool
+  description = "Whether to configure OpenBao OIDC authentication for the application."
+  default     = true
+}
+
 variable "oidc_discovery_url" {
   type        = string
   description = "OIDC discovery URL."

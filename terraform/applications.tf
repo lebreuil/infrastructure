@@ -61,7 +61,7 @@ module "application" {
   service_port       = each.value.service_port
   openbao_namespace  = each.value.openbao_namespace
   oidc_group         = each.value.oidc_group
-  oidc_enabled       = each.value.oidc_enabled
+  oidc_enabled       = each.value.oidc_enabled && var.oidc_client_secret != ""
   oidc_discovery_url = var.oidc_discovery_url
   oidc_client_id     = var.oidc_client_id
   oidc_client_secret = var.oidc_client_secret

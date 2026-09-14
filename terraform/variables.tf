@@ -93,9 +93,10 @@ variable "oidc_client_id" {
 }
 
 variable "oidc_client_secret" {
-  description = "OIDC client secret registered for OpenBao"
+  description = "Authentik OAuth/OIDC client secret registered for OpenBao; leave empty until Authentik is configured"
   type        = string
   sensitive   = true
+  default     = ""
 }
 
 variable "openbao_terraform_token" {

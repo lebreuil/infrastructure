@@ -43,9 +43,10 @@ Git.
 
 ### Script-based secret initialization
 
-If the platform team provides an application token and access to the
-initialization scripts, use the application token to create or update the
-application's `secret/config` entry:
+If the application repository provides an initialization script, use the
+application token to create or update the application's `secret/config` entry.
+The script belongs in that application repository, alongside its deployment
+configuration:
 
 ```bash
 OPENBAO_ADDR=https://openbao.your-domain.com
@@ -63,9 +64,9 @@ Export these variables from a local, uncommitted environment file and run:
 
 ```bash
 set -a
-source .env.app
+source .env
 set +a
-python3 app-secrets-init.py
+python3 scripts/app-secrets-init.py
 ```
 
 The script authenticates with the application token and writes generated
@@ -74,7 +75,7 @@ values, such as application keys and database passwords, to
 to the OpenBao namespace assigned to your application; do not use `app` unless
 that is the namespace provided by the platform team.
 
-Never commit `.env.app`, the application token, Cloudflare Access credentials,
+Never commit `.env`, the application token, Cloudflare Access credentials,
 or generated secret values. The script supports `DEBUG=1` for request metadata
 and status codes, but it does not log secret values.
 

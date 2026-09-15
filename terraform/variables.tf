@@ -85,22 +85,20 @@ variable "github_organization" {
 variable "oidc_discovery_url" {
   description = "OIDC discovery URL used by application-team authentication"
   type        = string
+  default     = ""
 }
 
 variable "oidc_client_id" {
-  description = "OIDC client ID registered for OpenBao"
+  description = "Authentik OAuth/OIDC client ID registered for OpenBao"
   type        = string
+  default     = ""
 }
 
 variable "oidc_client_secret" {
-  description = "OIDC client secret registered for OpenBao"
+  description = "Authentik OAuth/OIDC client secret registered for OpenBao; leave empty until Authentik is configured"
   type        = string
   sensitive   = true
-}
-
-variable "oidc_allowed_redirect_uris" {
-  description = "Redirect URIs registered for the shared OpenBao OIDC client"
-  type        = list(string)
+  default     = ""
 }
 
 variable "openbao_terraform_token" {
@@ -108,4 +106,3 @@ variable "openbao_terraform_token" {
   type        = string
   sensitive   = true
 }
-

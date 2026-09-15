@@ -49,7 +49,7 @@ The process is divided into three stages:
                       |
                       v
         +-----------------------------+
-        |  3. app-secrets-init.py     |
+        |  3. application repository  |
         |                             |
         |  Application token          |
         |       |                     |
@@ -96,8 +96,8 @@ The token is created in the application's namespace using the policy created by 
 app_write
 ```
 
-The application token is then used by `app-secrets-init.py` to write and read
-the application's secrets.
+The application token is then used by the application repository's secret
+initialization workflow to write and read the application's secrets.
 
 Applications never receive the Terraform token.
 
@@ -112,7 +112,8 @@ pip install hvac requests
 ```
 
 `openbao-bootstrap.py` uses `hvac`. `create-app-token.py` and
-`app-secrets-init.py` call the OpenBao HTTP API directly through `requests`.
+application repository secret scripts call the OpenBao HTTP API directly
+through `requests`.
 
 The OpenBao server must already be:
 
@@ -399,7 +400,7 @@ set -a
 source .env.app
 set +a
 
-python3 app-secrets-init.py
+Run the application repository's documented secret initialization script.
 ```
 
 The checked-in `.env.app` sets `BAO_NAMESPACE=app`. Always set the namespace
@@ -557,7 +558,7 @@ Never commit:
 3. Terraform configures auth/secrets engines
 4. Run create-app-token.py
 5. Store application token securely
-6. Run app-secrets-init.py
+6. Run the application repository's secret initialization script
 7. Deploy application
 ```
 

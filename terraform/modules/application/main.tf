@@ -137,6 +137,7 @@ resource "vault_policy" "write" {
 }
 
 resource "vault_jwt_auth_backend" "oidc" {
+  count              = var.oidc_enabled ? 1 : 0
   provider           = vault.terraform
   namespace          = vault_namespace.application.path
   path               = "oidc"
@@ -148,9 +149,10 @@ resource "vault_jwt_auth_backend" "oidc" {
 }
 
 resource "vault_jwt_auth_backend_role" "oidc" {
+  count                 = var.oidc_enabled ? 1 : 0
   provider              = vault.terraform
   namespace             = vault_namespace.application.path
-  backend               = vault_jwt_auth_backend.oidc.path
+  backend               = vault_jwt_auth_backend.oidc[0].path
   role_name             = var.name
   role_type             = "oidc"
   user_claim            = "sub"

@@ -253,7 +253,7 @@ if should_run 7; then
 fi
 
 # ============================================================
-# Final — apply remaining resources
+# Phase 8 — Final apply — remaining resources
 # ============================================================
 if should_run 8; then
   phase 8 "Final apply — remaining resources"

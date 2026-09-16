@@ -14,7 +14,7 @@ The platform team gives you:
 
 - the OpenBao UI URL
 - your OpenBao namespace
-- the secret path to use, normally `secret/config`
+- the secret path to use `secret/config` . The eso service account name can only read this path.
 - application access credentials or the approved secret-initialisation
   workflow
 - the ESO service account name and OpenBao auth role

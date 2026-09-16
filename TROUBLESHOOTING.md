@@ -270,6 +270,24 @@ kubectl delete pod test-curl
 
 ---
 
+## ExternalSecret reports "permission denied" (403) reading from OpenBao
+
+If `kubectl -n <app> get externalsecret <app>-config` shows a Vault 403 on
+`GET secret/data/<something>`, and `terraform apply` reports no pending
+changes (so the namespace, KV mount, auth backend, role, and policy all
+exist), the cause is almost always a `remoteRef.key` in the application's
+`ExternalSecret` that does not match the fixed `config` path granted by the
+`modules/application` read policy. Check:
+
+1. The `ExternalSecret`'s `remoteRef.key` (every entry) is `config`, not the
+   application name.
+2. The secret was actually written in the OpenBao UI at `secret/config`
+   inside the application's namespace.
+3. The `SecretStore`'s `auth.kubernetes.role` matches `<app>-secret-sync`
+   and its `namespace` matches the application's `openbao_namespace`.
+
+---
+
 ## Common Issues and Solutions
 
 | Symptom | Likely Cause | Solution |

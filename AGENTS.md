@@ -98,6 +98,14 @@ always inspect the plan before applying changes to shared infrastructure.
 - Keep secret names and mappings out of the application definition. The
   application repository owns the namespace-local `SecretStore` and
   `ExternalSecret` schema.
+- The reusable module's OpenBao read policy is **not parameterized by
+  application name**: it always grants `secret/data/config` and
+  `secret/metadata/config` inside the application's own OpenBao namespace.
+  Isolation between applications comes from the per-app OpenBao namespace,
+  not from a per-app secret key. Every application's `ExternalSecret` must
+  therefore use `config` as the `remoteRef.key` (or `dataFrom[].extract.key`)
+  — not the application name — and secrets must be written in the OpenBao UI
+  at `secret/config` within that application's namespace, not `secret/<app>`.
 - The platform repository contains one app-of-apps at
   `gitops/app-of-apps.yaml`. It watches the `applications` directory in
   `https://github.com/lebreuil/applications`. Add application Argo CD
